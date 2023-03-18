@@ -25,9 +25,6 @@ class Whisper(object):
         self.framework = os.environ.get("FRAMEWORK", "pt")
         self.output_path = os.environ.get("ONNX_DIR")
 
-        print(self.opset)
-        print(self.output_path)
-
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
 
