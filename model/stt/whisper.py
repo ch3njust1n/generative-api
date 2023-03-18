@@ -1,5 +1,6 @@
 import os
 import io
+import onnx
 import string
 import pyaudio
 import numpy as np
@@ -7,25 +8,54 @@ import soundfile as sf
 from scipy.io import wavfile
 from queue import Queue
 from threading import Thread
-from typing import Tuple, Dict
+from typing import any
+from transformers.convert_graph_to_onnx import convert
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
+
 
 class Whisper(object):
     def __init__(self):
-        self.seconds = int(os.environ.get('SECONDS', 5))
-        self.sampling_rate = int(os.environ.get('SAMPLING_RATE', 16000))
-        self.pretrained_model = os.environ.get('MODEL', 'openai/whisper-tiny')
+        self.opset = int(os.environ.get("OPSET", 18))
+        self.seconds = int(os.environ.get("SECONDS", 5))
+        self.sampling_rate = int(os.environ.get("SAMPLING_RATE", 16000))
+        self.pretrained_model = os.environ.get("MODEL", "openai/whisper-tiny")
+        self.framework = os.environ.get("FRAMEWORK", "pt")
 
         self.processor = WhisperProcessor.from_pretrained(self.pretrained_model)
-        self.model = WhisperForConditionalGeneration.from_pretrained(self.pretrained_model)
+        self.model = WhisperForConditionalGeneration.from_pretrained(
+            self.pretrained_model
+        )
         self.model.config.forced_decoder_ids = None
 
+    # Convert the model to ONNX
+    def convert_to_onnx(self, model: any, output_path: str, pipeline_name: str) -> None:
+        convert(
+            framework=self.framework,
+            model=model,
+            output=output_path,
+            opset=self.opset,
+            pipeline_name=pipeline_name,
+        )
+
+        onnx_model = onnx.load(output_path)
+        onnx.checker.check_model(onnx_model)
 
     # Record user audio
-    def record_audio(self, queue: Queue, chunk: int = 1024, channels: int = 1, rate: int = 16000, format: int = pyaudio.paInt16) -> None:
+    def record_audio(
+        self,
+        queue: Queue,
+        chunk: int = 1024,
+        channels: int = 1,
+        rate: int = 16000,
+        format: int = pyaudio.paInt16,
+    ) -> None:
         audio = pyaudio.PyAudio()
         stream = audio.open(
-            format=format, channels=channels, rate=rate, input=True, frames_per_buffer=chunk
+            format=format,
+            channels=channels,
+            rate=rate,
+            input=True,
+            frames_per_buffer=chunk,
         )
 
         print("Listening...")
@@ -40,7 +70,6 @@ class Whisper(object):
                 else:
                     raise e
 
-
     def convert_wav_to_flac(self, wav_data: np.ndarray, sample_rate: int) -> np.ndarray:
         flac_data = io.BytesIO()
         sf.write(flac_data, wav_data, sample_rate, format="FLAC")
@@ -49,7 +78,6 @@ class Whisper(object):
         flac_data_array, _ = sf.read(flac_data)
 
         return flac_data_array
-
 
     def transcribe_audio(self):
         # Initialize the recording thread and queue
@@ -69,7 +97,6 @@ class Whisper(object):
 
         while True:
             if not record_queue.empty():
-                
                 # Retrieve the recorded data and append it to the buffer
                 data = record_queue.get()
                 data_np = np.frombuffer(data, dtype=np.int16)
@@ -78,13 +105,14 @@ class Whisper(object):
 
                 # Check if the buffer is full
                 if buffer_len >= buffer_max_len:
-
                     # Concatenate the buffered data into a single array
                     audio_input = np.concatenate(buffer, axis=0)
 
                     # Save the audio input to a temporary file
                     temp_filename = "temp.wav"
-                    sf.write(temp_filename, audio_input, self.sampling_rate, subtype="PCM_16")
+                    sf.write(
+                        temp_filename, audio_input, self.sampling_rate, subtype="PCM_16"
+                    )
 
                     sampling_rate, data = wavfile.read("temp.wav")
                     data = self.convert_wav_to_flac(data, sampling_rate)
@@ -99,7 +127,12 @@ class Whisper(object):
 
                     # TODO: Trigger is for development purposes only. Remove later.
                     print("Transcription:", transcription)
-                    trigger = transcription[0].lower().translate(str.maketrans('', '', string.punctuation)).strip()
+                    trigger = (
+                        transcription[0]
+                        .lower()
+                        .translate(str.maketrans("", "", string.punctuation))
+                        .strip()
+                    )
 
                     if trigger == "stop":
                         break
