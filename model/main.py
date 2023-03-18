@@ -11,14 +11,16 @@ or Amazon Transcribe.
 """
 
 import os
+import io
 import pyaudio
 import torch
 import numpy as np
 import soundfile as sf
+from scipy.io import wavfile
 from queue import Queue
 from threading import Thread
-from transformers import pipeline
-from datasets import load_dataset
+from typing import Tuple, Dict
+from transformers import pipeline, WhisperProcessor, WhisperForConditionalGeneration
 
 
 # Record user audio
@@ -41,6 +43,26 @@ def record_audio(queue, chunk=1024, channels=1, rate=16000, format=pyaudio.paInt
                 raise e
 
 
+def convert_wav_to_flac(wav_data: np.ndarray, sample_rate: int) -> np.ndarray:
+    """
+    Converts a NumPy array containing WAV audio data to FLAC format and returns the resulting audio as a NumPy array.
+
+    Args:
+        wav_data (np.ndarray): A NumPy array containing the WAV audio data to convert.
+        sample_rate (int): The sample rate of the WAV audio data.
+
+    Returns:
+        A NumPy array representing the audio data from the resulting FLAC file.
+    """
+    flac_data = io.BytesIO()
+    sf.write(flac_data, wav_data, sample_rate, format="FLAC")
+
+    flac_data.seek(0)
+    flac_data_array, flac_sample_rate = sf.read(flac_data)
+
+    return flac_data_array
+
+
 def transcribe_audio():
     # Initialize the recording thread and queue
     record_queue = Queue()
@@ -52,7 +74,7 @@ def transcribe_audio():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     asr_pipeline = pipeline(
         "automatic-speech-recognition",
-        model="openai/whisper-tiny",
+        model="openai/whisper-medium",
         chunk_length_s=30,
         device=device,
     )
@@ -63,6 +85,9 @@ def transcribe_audio():
     buffer_max_len = 5 * 16000  # 5 seconds buffer
 
     print("Starting transcription loop...")
+    processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+    model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+    model.config.forced_decoder_ids = None
 
     while True:
         if not record_queue.empty():
@@ -78,21 +103,26 @@ def transcribe_audio():
                 audio_input = np.concatenate(buffer, axis=0)
 
                 # Save the audio input to a temporary file
-                temp_filename = "temp_audio.wav"
+                temp_filename = "temp.wav"
                 sf.write(temp_filename, audio_input, 16000, subtype="PCM_16")
 
-                # Load the audio from the temporary file
-                ds = load_dataset(
-                    "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+                sampling_rate, data = wavfile.read("temp.wav")
+                data = convert_wav_to_flac(data, sampling_rate)
+
+                processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+                model = WhisperForConditionalGeneration.from_pretrained(
+                    "openai/whisper-tiny"
                 )
-                sample = ds[0]["audio"]
-                sample["array"], _ = sf.read(temp_filename, dtype="int16")
+                model.config.forced_decoder_ids = None
 
-                # Transcribe the audio using the ASR pipeline
-                prediction = asr_pipeline(sample.copy())["text"]
-
-                # Print the text
-                print("Transcription:", prediction)
+                input_features = processor(
+                    data, sampling_rate=sampling_rate, return_tensors="pt"
+                ).input_features
+                predicted_ids = model.generate(input_features)
+                transcription = processor.batch_decode(
+                    predicted_ids, skip_special_tokens=True
+                )
+                print("Transcription:", transcription)
 
                 # Uncomment the following lines if you want to return timestamps for the predictions
                 # prediction = asr_pipeline(sample, return_timestamps=True)["chunks"]
@@ -103,8 +133,10 @@ def transcribe_audio():
                 buffer_len = 0
                 os.remove(temp_filename)
 
+
 def main():
     transcribe_audio()
+
 
 if __name__ == "__main__":
     main()
