@@ -71,15 +71,6 @@ def transcribe_audio():
     record_thread.daemon = True
     record_thread.start()
 
-    # Set up the ASR pipeline
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    asr_pipeline = pipeline(
-        "automatic-speech-recognition",
-        model="openai/whisper-medium",
-        chunk_length_s=30,
-        device=device,
-    )
-
     # Set up continuous streaming
     buffer = []
     buffer_len = 0
@@ -90,7 +81,7 @@ def transcribe_audio():
     model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium")
     model.config.forced_decoder_ids = None
 
-    pattern = r'[^\w\s]'
+    pattern = r"[^\w\s]"
 
     while True:
         if not record_queue.empty():
@@ -127,12 +118,8 @@ def transcribe_audio():
                 )
                 print("Transcription:", transcription)
 
-                if re.sub(pattern, '', transcription[0].lower().strip()) == "stop":
+                if re.sub(pattern, "", transcription[0].lower().strip()) == "stop":
                     break
-
-                # Uncomment the following lines if you want to return timestamps for the predictions
-                # prediction = asr_pipeline(sample, return_timestamps=True)["chunks"]
-                # print("Transcription with timestamps:", prediction)
 
                 # Clear the buffer and remove the temporary file
                 buffer = []
