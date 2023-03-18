@@ -19,3 +19,8 @@ Upgrade pip and install requirements.txt
 python3 -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+
+### Setting .env
+
+For latest ONNX opset table, see [here](https://github.com/onnx/onnx/blob/main/docs/Versioning.md).
