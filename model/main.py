@@ -12,6 +12,7 @@ or Amazon Transcribe.
 
 import os
 import io
+import re
 import pyaudio
 import torch
 import numpy as np
@@ -34,7 +35,7 @@ def record_audio(queue, chunk=1024, channels=1, rate=16000, format=pyaudio.paInt
 
     while True:
         try:
-            data = stream.read(chunk)
+            data = stream.read(chunk, exception_on_overflow=False)
             queue.put(data)
         except OSError as e:
             if e.errno == -9981:  # Input overflowed
@@ -85,9 +86,11 @@ def transcribe_audio():
     buffer_max_len = 5 * 16000  # 5 seconds buffer
 
     print("Starting transcription loop...")
-    processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
-    model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+    processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
+    model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium")
     model.config.forced_decoder_ids = None
+
+    pattern = r'[^\w\s]'
 
     while True:
         if not record_queue.empty():
@@ -123,6 +126,9 @@ def transcribe_audio():
                     predicted_ids, skip_special_tokens=True
                 )
                 print("Transcription:", transcription)
+
+                if re.sub(pattern, '', transcription[0].lower().strip()) == "stop":
+                    break
 
                 # Uncomment the following lines if you want to return timestamps for the predictions
                 # prediction = asr_pipeline(sample, return_timestamps=True)["chunks"]
