@@ -10,7 +10,11 @@ from scipy.io import wavfile
 from queue import Queue
 from threading import Thread
 from transformers.convert_graph_to_onnx import convert
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, PreTrainedModel
+from transformers import (
+    WhisperProcessor,
+    WhisperForConditionalGeneration,
+    PreTrainedModel,
+)
 
 
 class Whisper(object):
@@ -35,7 +39,9 @@ class Whisper(object):
         self.model.config.forced_decoder_ids = None
 
     # Convert the model to ONNX
-    def convert_to_onnx(self, model: PreTrainedModel, output_path: str, pipeline_name: str) -> None:
+    def convert_to_onnx(
+        self, model: PreTrainedModel, output_path: str, pipeline_name: str
+    ) -> None:
         convert(
             framework=self.framework,
             model=model,
