@@ -5,21 +5,31 @@ import string
 import pyaudio
 import numpy as np
 import soundfile as sf
+from dotenv import load_dotenv
 from scipy.io import wavfile
 from queue import Queue
 from threading import Thread
-from typing import any
 from transformers.convert_graph_to_onnx import convert
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
+from transformers import WhisperProcessor, WhisperForConditionalGeneration, PreTrainedModel
 
 
 class Whisper(object):
     def __init__(self):
+        self.current_directory_path = os.path.dirname(os.path.abspath(__file__))
+        load_dotenv(os.path.join(self.current_directory_path, "../.env"))
+
         self.opset = int(os.environ.get("OPSET", 18))
         self.seconds = int(os.environ.get("SECONDS", 5))
         self.sampling_rate = int(os.environ.get("SAMPLING_RATE", 16000))
         self.pretrained_model = os.environ.get("MODEL", "openai/whisper-tiny")
         self.framework = os.environ.get("FRAMEWORK", "pt")
+        self.output_path = os.environ.get("ONNX_DIR")
+
+        print(self.opset)
+        print(self.output_path)
+
+        if not os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
 
         self.processor = WhisperProcessor.from_pretrained(self.pretrained_model)
         self.model = WhisperForConditionalGeneration.from_pretrained(
@@ -28,7 +38,7 @@ class Whisper(object):
         self.model.config.forced_decoder_ids = None
 
     # Convert the model to ONNX
-    def convert_to_onnx(self, model: any, output_path: str, pipeline_name: str) -> None:
+    def convert_to_onnx(self, model: PreTrainedModel, output_path: str, pipeline_name: str) -> None:
         convert(
             framework=self.framework,
             model=model,
