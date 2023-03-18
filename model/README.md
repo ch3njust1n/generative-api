@@ -20,6 +20,10 @@ python3 -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+### Model weights
+
+`onnx` directory will automatically be created when stt.whisper model is instantiated.
+
 
 ### Setting .env
 
