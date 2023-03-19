@@ -125,6 +125,7 @@ class Whisper(object):
                     )
 
                     if trigger == "stop":
+                        os.remove(temp_filename)
                         break
 
                     # Clear the buffer and remove the temporary file
