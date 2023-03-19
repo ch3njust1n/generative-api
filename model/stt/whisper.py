@@ -8,22 +8,14 @@ https://huggingface.co/openai/whisper-tiny
 
 import os
 import io
-import onnx
 import string
 import pyaudio
 import numpy as np
 import soundfile as sf
-from dotenv import load_dotenv
 from scipy.io import wavfile
 from queue import Queue
 from threading import Thread
-from transformers.convert_graph_to_onnx import convert
-from transformers import (
-    WhisperProcessor,
-    WhisperForConditionalGeneration,
-    PreTrainedModel,
-)
-
+from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
 
 class Whisper(object):
