@@ -10,7 +10,7 @@ __pycache__/
 db.sqlite3
 
 # Ignore all .env files except for .env.example
-.env/
+.env.*
 !*.env.example
 
 # Ignore local development settings
