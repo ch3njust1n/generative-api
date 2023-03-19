@@ -1,10 +1,12 @@
 FROM python:3.10-slim
 
+ENV LDFLAGS="-L/usr/local/lib"
+ENV CFLAGS="-I/usr/local/include"
+
 WORKDIR /app
 
-
 RUN apt-get update && \
-    apt-get install -y ffmpeg gcc python3-dev && \
+    apt-get install -y ffmpeg gcc python3-dev portaudio19-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
