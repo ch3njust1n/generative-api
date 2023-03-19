@@ -24,6 +24,7 @@ hs_err_pid*
 
 # Temporary audio files
 *.wav
+!test.wav
 *.flac
 
 # Python
