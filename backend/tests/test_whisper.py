@@ -22,8 +22,12 @@ def test_convert_wav_to_flac(whisper):
     assert isinstance(flac_data, np.ndarray)
     assert len(flac_data) == len(wav_data)
 
+
 def test_whisper(whisper):
     sampling_rate, data = wavfile.read("test.wav")
     data = whisper.convert_wav_to_flac(data, sampling_rate)
     transcription = whisper.speech_to_text(data, sampling_rate)
-    assert transcription[0].strip() == 'Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel.'
+    assert (
+        transcription[0].strip()
+        == "Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel."
+    )

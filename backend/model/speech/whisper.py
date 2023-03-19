@@ -76,7 +76,7 @@ class Whisper(object):
         ).input_features
         predicted_ids = self.model.generate(input_features)
         return self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
-    
+
     def transcribe(self, file_path: str) -> str:
         sampling_rate, data = wavfile.read(file_path)
         data = self.convert_wav_to_flac(data, sampling_rate)
