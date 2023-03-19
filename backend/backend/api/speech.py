@@ -7,9 +7,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from model.speech.whisper import Whisper
 
-# You can insert the transcription function here
-# from your_transcription_module import transcribe
-
 ALLOWED_EXTENSIONS = {"mp3", "wav", "ogg", "m4a", "flac", "webm"}
 
 
@@ -31,7 +28,7 @@ def transcribe_audio(request):
                 {"error": "Invalid file type. Please upload an audio file."}, status=400
             )
         
-        print(type(file))
+        os.makedirs("media", exist_ok=True)
 
         # Save the received file
         filename = f"{uuid.uuid4()}.{file.name.rsplit('.', 1)[1].lower()}"
@@ -54,7 +51,7 @@ def transcribe_audio(request):
 
         # Call the transcription function
         # transcription = transcribe(wav_filepath)
-        transcription = "Transcription function should be called here"
+        transcription = model.transcribe(wav_filepath)
 
         # Remove the .wav file
         os.remove(wav_filepath)
