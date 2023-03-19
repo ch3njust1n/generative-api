@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  speech:
+    container_name: speech
+    restart: always
+    build: .
+    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_ENV=dev
