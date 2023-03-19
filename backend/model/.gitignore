@@ -30,6 +30,8 @@ hs_err_pid*
 # Python
 __pycache__/
 .pytest_cache
+model.egg-info
+build
 
 # OSX
 .DS_Store
