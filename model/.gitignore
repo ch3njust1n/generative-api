@@ -28,6 +28,7 @@ hs_err_pid*
 
 # Python
 __pycache__/
+.pytest_cache
 
 # OSX
 .DS_Store

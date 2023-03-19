@@ -15,7 +15,6 @@ import soundfile as sf
 from scipy.io import wavfile
 from queue import Queue
 from threading import Thread
-from typing import Tuple, Dict
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
 
@@ -126,6 +125,7 @@ class Whisper(object):
                     )
 
                     if trigger == "stop":
+                        os.remove(temp_filename)
                         break
 
                     # Clear the buffer and remove the temporary file
