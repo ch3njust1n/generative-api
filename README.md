@@ -1,5 +1,5 @@
 # gpt4-weekend
 
-[Model README](model/README.md)
+[Model README](backend/model/README.md)
 
 [Backend README](backend/README.md)
