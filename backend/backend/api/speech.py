@@ -7,6 +7,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from model.speech.whisper import Whisper
 
+model = Whisper(os.environ.get("MODEL", "openai/whisper-tiny"))
+
 ALLOWED_EXTENSIONS = {"mp3", "wav", "ogg", "m4a", "flac", "webm"}
 
 
@@ -16,8 +18,6 @@ def allowed_file(filename: str) -> bool:
 
 @csrf_exempt
 def transcribe_audio(request):
-    model = Whisper()
-
     if request.method == "POST":
         if "file" not in request.FILES:
             return JsonResponse({"error": "No file provided."}, status=400)

@@ -20,10 +20,10 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
 
 class Whisper(object):
-    def __init__(self):
+    def __init__(self, model: str = "openai/whisper-tiny"):
         self.seconds = int(os.environ.get("SECONDS", 5))
         self.sampling_rate = int(os.environ.get("SAMPLING_RATE", 16000))
-        self.pretrained_model = os.environ.get("MODEL", "openai/whisper-tiny")
+        self.pretrained_model = model
 
         self.processor = WhisperProcessor.from_pretrained(self.pretrained_model)
         self.model = WhisperForConditionalGeneration.from_pretrained(
