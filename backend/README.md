@@ -2,12 +2,9 @@
 
 ### Development
 
-```bash
-chmod +x setup.sh
-./setup.sh
-```
+#### Setup
 
-Set the environment variables in .env.dev and then run:
-```
-DJANGO_ENV=dev python manage.py runserver
+```bash
+docker-compose up -d --build
+docker run speech
 ```
