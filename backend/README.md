@@ -5,6 +5,8 @@
 #### Setup
 
 1. Add `.env.dev` in `backend/env/`
+- Add the SECRET_KEY parameter and set it to any non-empty while testing
+
 2. Build and run
 
 Change directory back to `backend/` and then:
