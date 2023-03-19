@@ -1,11 +1,11 @@
 import os
 import uuid
+from pydub import AudioSegment
 from django.urls import path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-# You can insert the transcription function here
-# from your_transcription_module import transcribe
+from model.speech.whisper import Whisper
 
 ALLOWED_EXTENSIONS = {"mp3", "wav", "ogg", "m4a", "flac", "webm"}
 
@@ -16,6 +16,8 @@ def allowed_file(filename: str) -> bool:
 
 @csrf_exempt
 def transcribe_audio(request):
+    model = Whisper()
+
     if request.method == "POST":
         if "file" not in request.FILES:
             return JsonResponse({"error": "No file provided."}, status=400)
@@ -25,10 +27,13 @@ def transcribe_audio(request):
             return JsonResponse(
                 {"error": "Invalid file type. Please upload an audio file."}, status=400
             )
+        
+        os.makedirs("media", exist_ok=True)
 
         # Save the received file
         filename = f"{uuid.uuid4()}.{file.name.rsplit('.', 1)[1].lower()}"
         filepath = os.path.join("media", filename)
+
         with open(filepath, "wb") as f:
             for chunk in file.chunks():
                 f.write(chunk)
@@ -46,7 +51,7 @@ def transcribe_audio(request):
 
         # Call the transcription function
         # transcription = transcribe(wav_filepath)
-        transcription = "Transcription function should be called here"
+        transcription = model.transcribe(wav_filepath)
 
         # Remove the .wav file
         os.remove(wav_filepath)
