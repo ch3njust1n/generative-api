@@ -1,13 +1,14 @@
-FROM python:3.10.8-alpine
+FROM python:3.10-slim
 
 WORKDIR /app
 
+
 RUN apt-get update && \
-    apt-get install -y ffmpeg && \
+    apt-get install -y ffmpeg gcc python3-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .

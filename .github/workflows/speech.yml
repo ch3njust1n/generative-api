@@ -49,7 +49,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: chenjus/whispser
+        images: chenjus/speech
         tags: |
           type=ref,event=branch
           type=semver,pattern={{version}}

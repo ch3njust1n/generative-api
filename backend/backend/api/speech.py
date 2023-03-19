@@ -27,7 +27,7 @@ def transcribe_audio(request):
             return JsonResponse(
                 {"error": "Invalid file type. Please upload an audio file."}, status=400
             )
-        
+
         os.makedirs("media", exist_ok=True)
 
         # Save the received file

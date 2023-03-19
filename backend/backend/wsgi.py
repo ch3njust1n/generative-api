@@ -16,9 +16,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 
 application = get_wsgi_application()
 
+
 def shutdown_handler():
-    print("Executing tasks before shutting down the server...")
-    print(os.getcwd())
     shutil.rmtree("media/")
+
 
 atexit.register(shutdown_handler)
