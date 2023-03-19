@@ -1,3 +1,11 @@
+"""
+This script continuously listens for audio input, processes the audio in 5-second chunks, and 
+transcribes the speech using the "openai/whisper" model series with the Transformers pipeline 
+and chunking enabled.
+
+https://huggingface.co/openai/whisper-tiny
+"""
+
 import os
 import io
 import onnx
@@ -17,41 +25,18 @@ from transformers import (
 )
 
 
+
 class Whisper(object):
     def __init__(self):
-        self.current_directory_path = os.path.dirname(os.path.abspath(__file__))
-        load_dotenv(os.path.join(self.current_directory_path, "../.env"))
-
-        self.opset = int(os.environ.get("OPSET", 18))
         self.seconds = int(os.environ.get("SECONDS", 5))
         self.sampling_rate = int(os.environ.get("SAMPLING_RATE", 16000))
         self.pretrained_model = os.environ.get("MODEL", "openai/whisper-tiny")
-        self.framework = os.environ.get("FRAMEWORK", "pt")
-        self.output_path = os.environ.get("ONNX_DIR")
-
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
 
         self.processor = WhisperProcessor.from_pretrained(self.pretrained_model)
         self.model = WhisperForConditionalGeneration.from_pretrained(
             self.pretrained_model
         )
         self.model.config.forced_decoder_ids = None
-
-    # Convert the model to ONNX
-    def convert_to_onnx(
-        self, model: PreTrainedModel, output_path: str, pipeline_name: str
-    ) -> None:
-        convert(
-            framework=self.framework,
-            model=model,
-            output=output_path,
-            opset=self.opset,
-            pipeline_name=pipeline_name,
-        )
-
-        onnx_model = onnx.load(output_path)
-        onnx.checker.check_model(onnx_model)
 
     # Record user audio
     def record_audio(

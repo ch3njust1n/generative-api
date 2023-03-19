@@ -26,4 +26,8 @@ hs_err_pid*
 *.wav
 *.flac
 
-*/__pycache__/*
+# Python
+__pycache__/
+
+# OSX
+.DS_Store
