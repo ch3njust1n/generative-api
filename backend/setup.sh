@@ -27,4 +27,4 @@ else
 fi
 
 # Install required packages
-pip install -r model/requirements.txt
+pip install -r requirements.txt
