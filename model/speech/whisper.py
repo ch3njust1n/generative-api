@@ -13,6 +13,7 @@ import pyaudio
 import numpy as np
 import soundfile as sf
 from scipy.io import wavfile
+from typing import List
 from queue import Queue
 from threading import Thread
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
@@ -69,6 +70,13 @@ class Whisper(object):
 
         return flac_data_array
 
+    def speech_to_text(self, data: np.ndarray, sampling_rate: int) -> List[str]:
+        input_features = self.processor(
+            data, sampling_rate=sampling_rate, return_tensors="pt"
+        ).input_features
+        predicted_ids = self.model.generate(input_features)
+        return self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
+
     def transcribe_audio(self):
         # Initialize the recording thread and queue
         record_queue = Queue()
@@ -107,13 +115,7 @@ class Whisper(object):
                     sampling_rate, data = wavfile.read("temp.wav")
                     data = self.convert_wav_to_flac(data, sampling_rate)
 
-                    input_features = self.processor(
-                        data, sampling_rate=sampling_rate, return_tensors="pt"
-                    ).input_features
-                    predicted_ids = self.model.generate(input_features)
-                    transcription = self.processor.batch_decode(
-                        predicted_ids, skip_special_tokens=True
-                    )
+                    transcription = self.speech_to_text(data, sampling_rate)
 
                     # TODO: Trigger is for development purposes only. Remove later.
                     print("Transcription:", transcription)
