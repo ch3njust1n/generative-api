@@ -1,7 +1,10 @@
 package co.rikin.geepee
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,22 +24,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.GeePeeTheme
 import co.rikin.geepee.ui.theme.PurpleGrey80
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +50,15 @@ class MainActivity : ComponentActivity() {
 fun App() {
   val viewModel = viewModel<AppViewModel>()
   val state = viewModel.state
+  val context = LocalContext.current
+
+  SideEffect {
+    state.commands.forEach { command ->
+      val intent = Intent(Intent.ACTION_VIEW, Uri.parse(command.deeplink))
+      context.startActivity(intent)
+    }
+    viewModel.action(AppAction.ClearCommands)
+  }
 
   GeePeeTheme {
     Column(
@@ -62,7 +69,7 @@ fun App() {
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-        Text(state.response, fontSize = 20.sp)
+        Text(state.display, fontSize = 20.sp)
       }
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -76,7 +83,7 @@ fun App() {
             .background(color = PurpleGrey80, shape = RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .clickable {
-               viewModel.action(AppAction.SubmitPrompt(state.prompt))
+              viewModel.action(AppAction.Submit(state.prompt))
             },
           contentAlignment = Alignment.Center
         ) {
@@ -91,45 +98,4 @@ fun App() {
 @Composable
 fun AppPlayground() {
   App()
-}
-
-class AppViewModel : ViewModel() {
-  var state by mutableStateOf(AppState())
-
-  fun action(action: AppAction) {
-    when (action) {
-      is AppAction.SubmitPrompt -> {
-        viewModelScope.launch(Dispatchers.IO) {
-          val response = GptClient.service.chat(
-            ChatRequest(
-              messages = listOf(
-                ChatMessage(
-                  role = "user",
-                  content = action.prompt
-                )
-              )
-            )
-          )
-
-          state = state.copy(response = response.choices[0].message.content)
-        }
-      }
-
-      is AppAction.UpdatePrompt -> {
-        state = state.copy(
-          prompt = action.text
-        )
-      }
-    }
-  }
-}
-
-data class AppState(
-  val response: String = "Sup?",
-  val prompt: String = ""
-)
-
-sealed class AppAction {
-  class UpdatePrompt(val text: String) : AppAction()
-  class SubmitPrompt(val prompt: String) : AppAction()
 }
