@@ -31,9 +31,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.GeePeeTheme
 import co.rikin.geepee.ui.theme.PurpleGrey80
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,9 +99,20 @@ class AppViewModel : ViewModel() {
   fun action(action: AppAction) {
     when (action) {
       is AppAction.SubmitPrompt -> {
-        state = state.copy(
-          response = "GPT: ${action.prompt}"
-        )
+        viewModelScope.launch(Dispatchers.IO) {
+          val response = GptClient.service.chat(
+            ChatRequest(
+              messages = listOf(
+                ChatMessage(
+                  role = "user",
+                  content = action.prompt
+                )
+              )
+            )
+          )
+
+          state = state.copy(response = response.choices[0].message.content)
+        }
       }
 
       is AppAction.UpdatePrompt -> {
@@ -111,7 +125,7 @@ class AppViewModel : ViewModel() {
 }
 
 data class AppState(
-  val response: String = "Go to camera",
+  val response: String = "Sup?",
   val prompt: String = ""
 )
 
