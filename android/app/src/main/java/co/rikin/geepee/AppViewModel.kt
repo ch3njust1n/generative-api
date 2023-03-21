@@ -7,8 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.http.Url
-import java.net.URL
 import java.net.URLEncoder
 
 class AppViewModel : ViewModel() {
@@ -30,18 +28,25 @@ class AppViewModel : ViewModel() {
           )
 
           val content = response.choices.first().message.content
+
+          val commands = listOf(
+            Command(
+              appId = "com.twitter.android",
+              deeplink = "https://twitter.com/intent/tweet?text=${
+                URLEncoder.encode(
+                  content,
+                  "UTF-8"
+                )
+              }"
+            )
+          )
+
           state = state.copy(
             display = content,
-            commands = listOf(
-              Command(
-                appId = "com.twitter.android",
-                deeplink = "https://twitter.com/intent/tweet?text=${URLEncoder.encode(content, "UTF-8")}"
-              )
-            )
+            commands = commands
           )
         }
       }
-
       is AppAction.UpdatePrompt -> {
         state = state.copy(
           prompt = action.text
@@ -66,7 +71,7 @@ data class AppState(
 sealed class AppAction {
   class UpdatePrompt(val text: String) : AppAction()
   class Submit(val prompt: String) : AppAction()
-  object ClearCommands: AppAction()
+  object ClearCommands : AppAction()
 }
 
 data class ApiAction(
