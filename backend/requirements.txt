@@ -24,6 +24,8 @@ filelock==3.10.0
     # via
     #   huggingface-hub
     #   transformers
+g2p-en==2.1.0
+    # via fairseq
 huggingface-hub==0.13.2
     # via transformers
 idna==3.4
