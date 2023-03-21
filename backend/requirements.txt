@@ -18,10 +18,14 @@ django==4.1.7
     # via -r requirements.in
 exceptiongroup==1.1.1
     # via pytest
+fairseq==0.12.2
+    # via -r requirements.in
 filelock==3.10.0
     # via
     #   huggingface-hub
     #   transformers
+g2p-en==2.1.0
+    # via fairseq
 huggingface-hub==0.13.2
     # via transformers
 idna==3.4
@@ -72,6 +76,10 @@ tomli==2.0.1
     # via pytest
 torch==1.13.0
     # via transformers
+torchaudio==0.13.0
+    # via -r requirements.in
+torchvision==0.14.0
+    # via -r requirements.in
 tqdm==4.65.0
     # via
     #   huggingface-hub
