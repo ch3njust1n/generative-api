@@ -29,33 +29,70 @@ class AppViewModel : ViewModel() {
 
           val content = response.choices.first().message.content
 
-          val commands = listOf(
-            Command(
-              appId = "com.twitter.android",
-              deeplink = "https://twitter.com/intent/tweet?text=${
-                URLEncoder.encode(
-                  content,
-                  "UTF-8"
-                )
-              }"
-            )
+          val command = Command.AppCommand(
+            appId = "com.twitter.android",
+            deeplink = "https://twitter.com/intent/tweet?text=${
+              URLEncoder.encode(
+                content,
+                "UTF-8"
+              )
+            }",
+            description = "Posting to Twitter",
           )
 
           state = state.copy(
-            display = content,
-            commands = commands
+            commandDisplay = state.commandDisplay.toMutableList().apply {
+              add(command)
+              toList()
+            }
           )
         }
       }
+
       is AppAction.UpdatePrompt -> {
-        state = state.copy(
-          prompt = action.text
-        )
+//        state = state.copy(
+//          prompt = action.text
+//        )
       }
 
       AppAction.ClearCommands -> {
         state = state.copy(
-          commands = emptyList()
+          commandDisplay = emptyList()
+        )
+      }
+
+      AppAction.OpenCamera -> {
+
+        val command = Command.SystemCommand(
+          peripheral = Peripheral.Camera,
+          description = "Taking a picture",
+        )
+
+        state = state.copy(
+          commandDisplay = state.commandDisplay.toMutableList().apply {
+            add(command)
+            toList()
+          },
+          commandQueue = listOf(command)
+        )
+      }
+
+      AppAction.SendToTwitter -> {
+        val command = Command.AppCommand(
+          appId = "com.twitter.android",
+          deeplink = "https://twitter.com/intent/tweet?text=${
+            URLEncoder.encode(
+              "Check this out!",
+              "UTF-8"
+            )
+          }",
+          description = "Posting to Twitter",
+        )
+        state = state.copy(
+          commandDisplay = state.commandDisplay.toMutableList().apply {
+            add(command)
+          },
+          commandQueue = listOf(command)
         )
       }
     }
@@ -63,15 +100,16 @@ class AppViewModel : ViewModel() {
 }
 
 data class AppState(
-  val display: String = "Sup?",
-  val prompt: String = "",
-  val commands: List<Command> = emptyList()
+  val commandDisplay: List<Command> = emptyList(),
+  val commandQueue: List<Command> = emptyList()
 )
 
 sealed class AppAction {
   class UpdatePrompt(val text: String) : AppAction()
   class Submit(val prompt: String) : AppAction()
   object ClearCommands : AppAction()
+  object OpenCamera : AppAction()
+  object SendToTwitter : AppAction()
 }
 
 data class ApiAction(
@@ -82,8 +120,23 @@ data class ApiAction(
   val appId: String? = null
 )
 
-data class Command(
-  val appId: String,
-  val deeplink: String,
-  val extra: String? = null
-)
+sealed class Command(
+  open val description: String,
+) {
+  data class AppCommand(
+    val appId: String,
+    val deeplink: String,
+    override val description: String,
+    val extra: String? = null,
+  ) : Command(description)
+
+  data class SystemCommand(
+    val peripheral: Peripheral,
+    override val description: String,
+  ) : Command(description)
+}
+
+enum class Peripheral {
+  Camera,
+  ScreenRecorder
+}
