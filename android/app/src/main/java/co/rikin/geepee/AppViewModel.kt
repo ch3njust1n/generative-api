@@ -62,18 +62,43 @@ class AppViewModel : ViewModel() {
       }
 
       AppAction.OpenCamera -> {
-
-        val command = Command.SystemCommand(
-          peripheral = Peripheral.Camera,
-          description = "Taking a picture",
+        val commands = listOf(
+          Command.SystemCommand(
+            peripheral = Peripheral.Camera,
+            description = "Taking a picture",
+          ),
+          Command.AppCommand(
+            appId = "com.twitter.android",
+            deeplink = "https://twitter.com/intent/tweet?text=${
+              URLEncoder.encode(
+                "Check this out!",
+                "UTF-8"
+              )
+            }",
+            description = "Posting to Twitter",
+          ),
+          Command.SystemCommand(
+            peripheral = Peripheral.Camera,
+            description = "Taking a picture",
+          ),
+          Command.AppCommand(
+            appId = "com.twitter.android",
+            deeplink = "https://twitter.com/intent/tweet?text=${
+              URLEncoder.encode(
+                "Check this out!",
+                "UTF-8"
+              )
+            }",
+            description = "Posting to Twitter",
+          )
         )
 
         state = state.copy(
           commandDisplay = state.commandDisplay.toMutableList().apply {
-            add(command)
+            addAll(commands)
             toList()
           },
-          commandQueue = listOf(command)
+          commandQueue = commands
         )
       }
 
@@ -95,6 +120,12 @@ class AppViewModel : ViewModel() {
           commandQueue = listOf(command)
         )
       }
+
+      AppAction.Advance -> {
+        state = state.copy(
+          commandQueue = state.commandQueue.drop(1)
+        )
+      }
     }
   }
 }
@@ -110,6 +141,7 @@ sealed class AppAction {
   object ClearCommands : AppAction()
   object OpenCamera : AppAction()
   object SendToTwitter : AppAction()
+  object Advance: AppAction()
 }
 
 data class ApiAction(

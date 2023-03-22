@@ -25,7 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.GeePeeTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,42 +48,50 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-  val context = LocalContext.current
-  val appLauncher = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.StartActivityForResult()
-  ) {}
-  val permissionLauncher = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.RequestPermission()
-  ) {}
 
+  val context = LocalContext.current
   val viewModel = viewModel<AppViewModel>()
   val state = viewModel.state
 
-  SideEffect {
-    state.commandQueue.forEach { command ->
-      when (command) {
-        is Command.AppCommand -> {
-          val intent = Intent(Intent.ACTION_VIEW, Uri.parse(command.deeplink))
-          appLauncher.launch(intent)
-        }
 
-        is Command.SystemCommand -> {
-          when (command.peripheral) {
-            Peripheral.Camera -> {
-              if (ContextCompat.checkSelfPermission(
-                  context,
-                  Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED
-              ) {
-                appLauncher.launch(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
-              } else {
-                permissionLauncher.launch(Manifest.permission.CAMERA)
-              }
+  val permissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+  ) {
+    viewModel.action(AppAction.Advance)
+  }
+
+
+  val appLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.StartActivityForResult()
+  ) {
+    viewModel.action(AppAction.Advance)
+  }
+
+  LaunchedEffect(state.commandQueue) {
+    if (state.commandQueue.isEmpty()) return@LaunchedEffect
+    delay(1000)
+    when (val command = state.commandQueue.first()) {
+      is Command.AppCommand -> {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(command.deeplink))
+        appLauncher.launch(intent)
+      }
+
+      is Command.SystemCommand -> {
+        when (command.peripheral) {
+          Peripheral.Camera -> {
+            if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+              ) == PackageManager.PERMISSION_GRANTED
+            ) {
+              appLauncher.launch(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+            } else {
+              permissionLauncher.launch(Manifest.permission.CAMERA)
             }
+          }
 
-            Peripheral.ScreenRecorder -> {
+          Peripheral.ScreenRecorder -> {
 
-            }
           }
         }
       }
