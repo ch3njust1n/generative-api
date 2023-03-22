@@ -1,10 +1,16 @@
 package co.rikin.geepee
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,31 +18,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.GeePeeTheme
-import co.rikin.geepee.ui.theme.PurpleGrey80
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,37 +48,86 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
+
+  val context = LocalContext.current
   val viewModel = viewModel<AppViewModel>()
   val state = viewModel.state
+
+
+  val permissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+  ) {
+    viewModel.action(AppAction.Advance)
+  }
+
+
+  val appLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.StartActivityForResult()
+  ) {
+    viewModel.action(AppAction.Advance)
+  }
+
+  LaunchedEffect(state.commandQueue) {
+    if (state.commandQueue.isEmpty()) return@LaunchedEffect
+    delay(1000)
+    when (val command = state.commandQueue.first()) {
+      is Command.AppCommand -> {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(command.deeplink))
+        appLauncher.launch(intent)
+      }
+
+      is Command.SystemCommand -> {
+        when (command.peripheral) {
+          Peripheral.Camera -> {
+            if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+              ) == PackageManager.PERMISSION_GRANTED
+            ) {
+              appLauncher.launch(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+            } else {
+              permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+          }
+
+          Peripheral.ScreenRecorder -> {
+
+          }
+        }
+      }
+    }
+  }
 
   GeePeeTheme {
     Column(
       modifier = Modifier
         .fillMaxSize()
+        .background(color = MaterialTheme.colorScheme.background)
         .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-        Text(state.response, fontSize = 20.sp)
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .weight(1f),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
+        horizontalAlignment = Alignment.Start
+      ) {
+        state.commandDisplay.forEach { command ->
+          SpeechBubble(content = command.description)
+        }
       }
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        TextField(modifier = Modifier.weight(1f), value = state.prompt, onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) })
-        Box(
-          modifier = Modifier
-            .size(60.dp)
-            .background(color = PurpleGrey80, shape = RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .clickable {
-               viewModel.action(AppAction.SubmitPrompt(state.prompt))
-            },
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(imageVector = Icons.Rounded.Send, contentDescription = "Send")
+        Button(onClick = { viewModel.action(AppAction.OpenCamera) }) {
+          Text("\"Take a picture\"")
+        }
+        Button(onClick = { viewModel.action(AppAction.SendToTwitter) }) {
+          Text("\"Share that to Twitter\"")
         }
       }
     }
@@ -93,43 +140,30 @@ fun AppPlayground() {
   App()
 }
 
-class AppViewModel : ViewModel() {
-  var state by mutableStateOf(AppState())
-
-  fun action(action: AppAction) {
-    when (action) {
-      is AppAction.SubmitPrompt -> {
-        viewModelScope.launch(Dispatchers.IO) {
-          val response = GptClient.service.chat(
-            ChatRequest(
-              messages = listOf(
-                ChatMessage(
-                  role = "user",
-                  content = action.prompt
-                )
-              )
-            )
-          )
-
-          state = state.copy(response = response.choices[0].message.content)
-        }
-      }
-
-      is AppAction.UpdatePrompt -> {
-        state = state.copy(
-          prompt = action.text
+@Composable
+fun SpeechBubble(content: String) {
+  Box(
+    modifier = Modifier
+      .wrapContentSize()
+      .background(
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(
+          topStartPercent = 50,
+          topEndPercent = 50,
+          bottomStartPercent = 0,
+          bottomEndPercent = 50
         )
-      }
-    }
+      )
+      .padding(16.dp)
+  ) {
+    Text(text = content, color = MaterialTheme.colorScheme.onPrimary)
   }
 }
 
-data class AppState(
-  val response: String = "Sup?",
-  val prompt: String = ""
-)
-
-sealed class AppAction {
-  class UpdatePrompt(val text: String) : AppAction()
-  class SubmitPrompt(val prompt: String) : AppAction()
+@Preview
+@Composable
+fun SpeechBubblePreview() {
+  GeePeeTheme {
+    SpeechBubble("Take a picture")
+  }
 }
