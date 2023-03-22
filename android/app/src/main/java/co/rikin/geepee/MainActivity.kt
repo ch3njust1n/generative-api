@@ -11,6 +11,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,11 +21,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -99,35 +109,45 @@ fun App() {
   }
 
   GeePeeTheme {
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .background(color = MaterialTheme.colorScheme.background)
-        .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    if (state.initializing) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .background(color = MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+      ) {
+        Text("Initializing")
+      }
+    } else {
       Column(
         modifier = Modifier
-          .fillMaxWidth()
-          .weight(1f),
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
-        horizontalAlignment = Alignment.Start
+          .fillMaxSize()
+          .background(color = MaterialTheme.colorScheme.background)
+          .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
       ) {
-        state.commandDisplay.forEach { command ->
-          SpeechBubble(content = command.description)
+        LazyColumn(
+          modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f),
+          verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
+          horizontalAlignment = Alignment.Start
+        ) {
+          items(state.promptQueue) { message ->
+            SpeechBubble(content = message.content)
+          }
+
         }
-      }
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Button(onClick = { viewModel.action(AppAction.OpenCamera) }) {
-          Text("\"Take a picture\"")
-        }
-        Button(onClick = { viewModel.action(AppAction.SendToTwitter) }) {
-          Text("\"Share that to Twitter\"")
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          TextField(modifier = Modifier.weight(1f), value = state.currentPrompt, onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) })
+          IconButton(onClick = { viewModel.action(AppAction.Submit(state.currentPrompt)) }) {
+            Icon(imageVector = Icons.Rounded.Send, contentDescription = "Send")
+          }
         }
       }
     }
@@ -147,12 +167,7 @@ fun SpeechBubble(content: String) {
       .wrapContentSize()
       .background(
         color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(
-          topStartPercent = 50,
-          topEndPercent = 50,
-          bottomStartPercent = 0,
-          bottomEndPercent = 50
-        )
+        shape = RoundedCornerShape(16.dp)
       )
       .padding(16.dp)
   ) {
