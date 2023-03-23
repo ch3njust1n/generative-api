@@ -10,6 +10,9 @@ from neo4j import GraphDatabase
 
 class FileSystemTree(AppConfig):
     def __init__(self, uri, user, password):
+        self.uri = uri
+        self.user = user
+        self.password = password
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
     def __enter__(self):
@@ -39,7 +42,7 @@ class FileSystemTree(AppConfig):
         )
         return result.single()[0]
 
-    def get_system_info() -> Dict[str, Union[str, int, float]]:
+    def get_system_info(self) -> Dict[str, Union[str, int, float]]:
         system_info = {
             "platform": platform.system(),
             "platform-release": platform.release(),
@@ -53,7 +56,7 @@ class FileSystemTree(AppConfig):
         }
         return system_info
 
-    def map_file_system(path: str = "/") -> Dict[str, Union[str, List]]:
+    def map_file_system(self, path: str = "/") -> Dict[str, Union[str, List]]:
         file_tree = {"type": "directory", "contents": []}
 
         queue = deque()
