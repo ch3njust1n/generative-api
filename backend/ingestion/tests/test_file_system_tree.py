@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from server.server.fstree.neo4j import FileSystemTree
+from server.server.system.fstree import FileSystemTree
 
 
 class TestFileSystemTree(unittest.TestCase):
