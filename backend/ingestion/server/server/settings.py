@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "backend.apis",
+    "backend.fstree",
 ]
 
 MIDDLEWARE = [
