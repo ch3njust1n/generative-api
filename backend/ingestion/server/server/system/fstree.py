@@ -1,11 +1,13 @@
 import os
 import time
+import hashlib
 from collections import deque
 from typing import Dict, List, Union
 import psutil
 import platform
 from django.apps import AppConfig
 from neo4j import GraphDatabase
+import networkx as nx
 
 
 class FileSystemTree(AppConfig):
@@ -22,7 +24,8 @@ class FileSystemTree(AppConfig):
         self.close()
 
     def ready(self):
-        print("started neo4j")
+        file_tree = self.map_file_system("/")
+        nx.write_graphml(file_tree, "file_tree.graphml")
 
     def close(self):
         self.driver.close()
@@ -56,14 +59,15 @@ class FileSystemTree(AppConfig):
         }
         return system_info
 
-    def map_file_system(self, path: str = "/") -> Dict[str, Union[str, List]]:
-        file_tree = {"type": "directory", "contents": []}
+    def map_file_system(self, path: str = "/") -> nx.DiGraph:
+        file_tree = nx.DiGraph()
+        file_tree.add_node(path, type="directory")
 
         queue = deque()
-        queue.append((file_tree["contents"], path))
+        queue.append(path)
 
         while queue:
-            current_contents, current_path = queue.popleft()
+            current_path = queue.popleft()
 
             if "/dev" in current_path or "/proc" in current_path:
                 continue
@@ -72,23 +76,72 @@ class FileSystemTree(AppConfig):
                 with os.scandir(current_path) as entries:
                     for entry in entries:
                         if entry.is_file():
-                            current_contents.append(
-                                {"type": "file", "name": entry.name}
+                            file_tree.add_node(
+                                os.path.join(current_path, entry.name),
+                                type="file",
+                                name=entry.name,
+                            )
+                            file_tree.add_edge(
+                                current_path, os.path.join(current_path, entry.name)
                             )
                         elif entry.is_dir():
-                            subdir = {
-                                "type": "directory",
-                                "name": entry.name,
-                                "contents": [],
-                            }
-                            current_contents.append(subdir)
-                            queue.append(
-                                (
-                                    subdir["contents"],
-                                    os.path.join(current_path, entry.name),
-                                )
+                            subdir = os.path.join(current_path, entry.name)
+                            file_tree.add_node(
+                                subdir, type="directory", name=entry.name
                             )
+                            file_tree.add_edge(current_path, subdir)
+                            queue.append(subdir)
+
             except (PermissionError, FileNotFoundError):
                 pass
 
         return file_tree
+
+    def update_graph_with_merkle_tree(
+        self, file_tree: nx.DiGraph, graphml_file: str
+    ) -> nx.DiGraph:
+        # load the graph from the graphml file
+        G = nx.read_graphml(graphml_file)
+
+        # calculate the Merkle Trees for the original and new file trees
+        original_merkle_tree = self._calculate_merkle_tree(G)
+        new_merkle_tree = self._calculate_merkle_tree(file_tree)
+
+        # find the differences between the two trees
+        differences = self._find_differences(original_merkle_tree, new_merkle_tree)
+
+        # apply the differences to the original graph
+        for node, attributes in differences.items():
+            if attributes is None:
+                G.remove_node(node)
+            else:
+                G.add_node(node, **attributes)
+
+        return G
+
+    def _calculate_merkle_tree(self, file_tree: nx.DiGraph) -> dict:
+        merkle_tree = {}
+        for node in sorted(file_tree.nodes):
+            hash_value = hashlib.sha256(
+                repr(file_tree.nodes[node]).encode()
+            ).hexdigest()
+            merkle_tree[node] = hash_value
+
+        return merkle_tree
+
+    def _find_differences(self, original_tree: dict, new_tree: dict) -> dict:
+        differences = {}
+        
+        # find nodes in new_tree that are not in original_tree
+        for node, hash_value in new_tree.items():
+            if node not in original_tree:
+                differences[node] = new_tree[node]
+            elif original_tree[node] != hash_value:
+                differences[node] = new_tree[node]
+
+        # find nodes in original_tree that are not in new_tree
+        for node, hash_value in original_tree.items():
+            if node not in new_tree:
+                differences[node] = None
+
+        return differences
