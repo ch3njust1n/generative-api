@@ -107,6 +107,7 @@ fun App() {
             type = "image/jpg"
             setPackage(command.appId)
             putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TEXT, command.description)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
           }
           appLauncher.launch(intent)
