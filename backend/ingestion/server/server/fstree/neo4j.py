@@ -6,6 +6,12 @@ class FileSystemTree(AppConfig):
     def __init__(self, uri, user, password):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def ready(self):
         print('started neo4j')
 
