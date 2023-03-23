@@ -1,19 +1,20 @@
 package co.rikin.geepee
 
 import android.Manifest
+import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,11 +25,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Send
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.GeePeeTheme
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,16 +52,27 @@ class MainActivity : ComponentActivity() {
       App()
     }
   }
+
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
 
+  fun createImageUri(context: Context): Uri? {
+    val timestamp = System.currentTimeMillis()
+    val contentValues = ContentValues().apply {
+      put(MediaStore.Images.Media.DISPLAY_NAME, "test_photo_$timestamp.jpg")
+      put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+    }
+    return context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+  }
+
   val context = LocalContext.current
   val viewModel = viewModel<AppViewModel>()
   val state = viewModel.state
-
+  val uri = createImageUri(context)
 
   val permissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission()
@@ -78,6 +87,14 @@ fun App() {
     viewModel.action(AppAction.Advance)
   }
 
+  val photoLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicture()) { success ->
+    if (success) {
+      Log.d("GeePee", uri.toString())
+    }
+    viewModel.action(AppAction.Advance)
+  }
+
+
   LaunchedEffect(state.commandQueue) {
     if (state.commandQueue.isEmpty()) return@LaunchedEffect
     when (val command = state.commandQueue.first()) {
@@ -87,9 +104,11 @@ fun App() {
           appLauncher.launch(intent)
         } else {
           val intent = Intent().apply {
-            type = "text/plain"
+            type = "image/jpg"
             setPackage(command.appId)
-            putExtra(Intent.EXTRA_TEXT, "Hello from GeePee")
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TEXT, command.description)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
           }
           appLauncher.launch(intent)
         }
@@ -103,7 +122,7 @@ fun App() {
                 Manifest.permission.CAMERA
               ) == PackageManager.PERMISSION_GRANTED
             ) {
-              appLauncher.launch(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+              photoLauncher.launch(uri)
             } else {
               permissionLauncher.launch(Manifest.permission.CAMERA)
             }
@@ -166,6 +185,7 @@ fun App() {
     }
   }
 }
+
 
 @Preview
 @Composable

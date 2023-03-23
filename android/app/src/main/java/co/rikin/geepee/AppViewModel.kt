@@ -13,7 +13,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNames
 
 class AppViewModel : ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
@@ -88,7 +87,7 @@ class AppViewModel : ViewModel() {
                   Command.AppCommand(
                     appId = action.appId,
                     deeplink = "",
-                    description = action.action
+                    description = action.parameters ?: ""
                   )
                 } else {
                   Command.UnsupportedCommand
