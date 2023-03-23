@@ -4,6 +4,7 @@ File system information ingestion
 
 import time
 
+
 def main():
     start = time.perf_counter()
     system_info = get_system_info()

@@ -69,7 +69,9 @@ class FileSystemTree(AppConfig):
                 with os.scandir(current_path) as entries:
                     for entry in entries:
                         if entry.is_file():
-                            current_contents.append({"type": "file", "name": entry.name})
+                            current_contents.append(
+                                {"type": "file", "name": entry.name}
+                            )
                         elif entry.is_dir():
                             subdir = {
                                 "type": "directory",
@@ -78,7 +80,10 @@ class FileSystemTree(AppConfig):
                             }
                             current_contents.append(subdir)
                             queue.append(
-                                (subdir["contents"], os.path.join(current_path, entry.name))
+                                (
+                                    subdir["contents"],
+                                    os.path.join(current_path, entry.name),
+                                )
                             )
             except (PermissionError, FileNotFoundError):
                 pass
