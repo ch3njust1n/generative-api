@@ -47,9 +47,16 @@ interface GptService {
 
 data class ChatRequest(
   @Json(name="model")
-  val model: String = "gpt-3.5-turbo",
+  val model: String = "gpt-4",
+  @Json(name="temperature")
+  val temperature: Float = 0.7f,
   @Json(name="messages")
   val messages: List<ChatMessage>
+)
+
+data class PromptData(
+  @Json(name="command")
+  val command: String
 )
 
 data class ChatMessage(

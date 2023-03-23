@@ -1,58 +1,119 @@
 package co.rikin.geepee
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.rikin.geepee.ui.InitialPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNames
 
 class AppViewModel : ViewModel() {
-  var state by mutableStateOf(AppState())
+  var state by mutableStateOf(AppState(initializing = true))
+
+  init {
+    action(AppAction.InitialSetup())
+  }
 
   fun action(action: AppAction) {
+    Log.d("Actions", action.toString())
     when (action) {
-      is AppAction.Submit -> {
+      is AppAction.InitialSetup -> {
+        val initialMessage = ChatMessage(
+          role = "system",
+          content = InitialPrompt
+        )
+        val initialList = listOf(initialMessage)
+
+        state = state.copy(initializing = false, promptQueue = initialList)
+
         viewModelScope.launch(Dispatchers.IO) {
           val response = GptClient.service.chat(
             ChatRequest(
-              messages = listOf(
-                ChatMessage(
-                  role = "user",
-                  content = action.prompt
-                )
-              )
+              messages = initialList
             )
           )
 
-          val content = response.choices.first().message.content
-
-          val command = Command.AppCommand(
-            appId = "com.twitter.android",
-            deeplink = "https://twitter.com/intent/tweet?text=${
-              URLEncoder.encode(
-                content,
-                "UTF-8"
-              )
-            }",
-            description = "Posting to Twitter",
-          )
+          val message = response.choices.first().message
 
           state = state.copy(
-            commandDisplay = state.commandDisplay.toMutableList().apply {
-              add(command)
+            promptQueue = state.promptQueue.toMutableList().apply {
+              add(message)
               toList()
             }
           )
         }
       }
 
+      is AppAction.Submit -> {
+        state = state.copy(
+          promptQueue = state.promptQueue.toMutableList().apply {
+            add(
+              ChatMessage(
+                role = "user",
+                content = action.prompt
+              )
+            )
+            toList()
+          },
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+          val response = GptClient.service.chat(
+            ChatRequest(
+              messages = state.promptQueue
+            )
+          )
+
+          val message = response.choices.first().message
+          Log.d("GeePee", message.content)
+          val apiActions = Json.decodeFromString<ApiActions>(message.content)
+          val commands = apiActions.actions.map { action ->
+            when(action.component) {
+              "camera" -> {
+                Command.SystemCommand(
+                  peripheral = Peripheral.Camera,
+                  description = action.action
+                )
+              }
+              "app" -> {
+                if(action.appId != null) {
+                  Command.AppCommand(
+                    appId = action.appId,
+                    deeplink = "",
+                    description = action.action
+                  )
+                } else {
+                  Command.UnsupportedCommand
+                }
+              }
+              else -> {
+                Command.UnsupportedCommand
+              }
+            }
+          }
+
+          state = state.copy(
+            promptQueue = state.promptQueue.toMutableList().apply {
+              add(message)
+              toList()
+            },
+            commandQueue = commands
+          )
+        }
+      }
+
       is AppAction.UpdatePrompt -> {
-//        state = state.copy(
-//          prompt = action.text
-//        )
+        state = state.copy(
+          currentPrompt = action.text
+        )
       }
 
       AppAction.ClearCommands -> {
@@ -62,63 +123,11 @@ class AppViewModel : ViewModel() {
       }
 
       AppAction.OpenCamera -> {
-        val commands = listOf(
-          Command.SystemCommand(
-            peripheral = Peripheral.Camera,
-            description = "Taking a picture",
-          ),
-          Command.AppCommand(
-            appId = "com.twitter.android",
-            deeplink = "https://twitter.com/intent/tweet?text=${
-              URLEncoder.encode(
-                "Check this out!",
-                "UTF-8"
-              )
-            }",
-            description = "Posting to Twitter",
-          ),
-          Command.SystemCommand(
-            peripheral = Peripheral.Camera,
-            description = "Taking a picture",
-          ),
-          Command.AppCommand(
-            appId = "com.twitter.android",
-            deeplink = "https://twitter.com/intent/tweet?text=${
-              URLEncoder.encode(
-                "Check this out!",
-                "UTF-8"
-              )
-            }",
-            description = "Posting to Twitter",
-          )
-        )
 
-        state = state.copy(
-          commandDisplay = state.commandDisplay.toMutableList().apply {
-            addAll(commands)
-            toList()
-          },
-          commandQueue = commands
-        )
       }
 
       AppAction.SendToTwitter -> {
-        val command = Command.AppCommand(
-          appId = "com.twitter.android",
-          deeplink = "https://twitter.com/intent/tweet?text=${
-            URLEncoder.encode(
-              "Check this out!",
-              "UTF-8"
-            )
-          }",
-          description = "Posting to Twitter",
-        )
-        state = state.copy(
-          commandDisplay = state.commandDisplay.toMutableList().apply {
-            add(command)
-          },
-          commandQueue = listOf(command)
-        )
+
       }
 
       AppAction.Advance -> {
@@ -131,24 +140,35 @@ class AppViewModel : ViewModel() {
 }
 
 data class AppState(
+  val initializing: Boolean = false,
+  val promptQueue: List<ChatMessage> = emptyList(),
   val commandDisplay: List<Command> = emptyList(),
-  val commandQueue: List<Command> = emptyList()
+  val commandQueue: List<Command> = emptyList(),
+  val currentPrompt: String = ""
 )
 
 sealed class AppAction {
+  class InitialSetup() : AppAction()
   class UpdatePrompt(val text: String) : AppAction()
   class Submit(val prompt: String) : AppAction()
   object ClearCommands : AppAction()
   object OpenCamera : AppAction()
   object SendToTwitter : AppAction()
-  object Advance: AppAction()
+  object Advance : AppAction()
 }
 
+@Serializable
+data class ApiActions(
+  val actions: List<ApiAction>
+)
+
+@Serializable
 data class ApiAction(
   val component: String,
   val action: String,
   val subcomponent: String? = null,
   val parameters: String? = null,
+  @SerialName("app_id")
   val appId: String? = null
 )
 
@@ -166,6 +186,8 @@ sealed class Command(
     val peripheral: Peripheral,
     override val description: String,
   ) : Command(description)
+
+  object UnsupportedCommand: Command("This command is currently not supported")
 }
 
 enum class Peripheral {
