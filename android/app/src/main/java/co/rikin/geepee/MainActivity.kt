@@ -2,6 +2,7 @@ package co.rikin.geepee
 
 import android.Manifest
 import android.content.Intent
+import android.content.Intent.ACTION_VIEW
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -79,11 +80,19 @@ fun App() {
 
   LaunchedEffect(state.commandQueue) {
     if (state.commandQueue.isEmpty()) return@LaunchedEffect
-    delay(1000)
     when (val command = state.commandQueue.first()) {
       is Command.AppCommand -> {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(command.deeplink))
-        appLauncher.launch(intent)
+        if(command.deeplink.isNotEmpty()) {
+          val intent = Intent(ACTION_VIEW, Uri.parse(command.deeplink))
+          appLauncher.launch(intent)
+        } else {
+          val intent = Intent().apply {
+            type = "text/plain"
+            setPackage(command.appId)
+            putExtra(Intent.EXTRA_TEXT, "Hello from GeePee")
+          }
+          appLauncher.launch(intent)
+        }
       }
 
       is Command.SystemCommand -> {
@@ -104,6 +113,10 @@ fun App() {
 
           }
         }
+      }
+
+      Command.UnsupportedCommand -> {
+        viewModel.action(AppAction.Advance)
       }
     }
   }

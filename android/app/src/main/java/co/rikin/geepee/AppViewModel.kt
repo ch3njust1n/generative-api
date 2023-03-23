@@ -7,11 +7,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.rikin.geepee.ui.InitialPrompt
-import com.squareup.moshi.Json
-import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNames
 
 class AppViewModel : ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
@@ -71,12 +73,39 @@ class AppViewModel : ViewModel() {
           )
 
           val message = response.choices.first().message
+          Log.d("GeePee", message.content)
+          val apiActions = Json.decodeFromString<ApiActions>(message.content)
+          val commands = apiActions.actions.map { action ->
+            when(action.component) {
+              "camera" -> {
+                Command.SystemCommand(
+                  peripheral = Peripheral.Camera,
+                  description = action.action
+                )
+              }
+              "app" -> {
+                if(action.appId != null) {
+                  Command.AppCommand(
+                    appId = action.appId,
+                    deeplink = "",
+                    description = action.action
+                  )
+                } else {
+                  Command.UnsupportedCommand
+                }
+              }
+              else -> {
+                Command.UnsupportedCommand
+              }
+            }
+          }
 
           state = state.copy(
             promptQueue = state.promptQueue.toMutableList().apply {
               add(message)
               toList()
             },
+            commandQueue = commands
           )
         }
       }
@@ -128,11 +157,18 @@ sealed class AppAction {
   object Advance : AppAction()
 }
 
+@Serializable
+data class ApiActions(
+  val actions: List<ApiAction>
+)
+
+@Serializable
 data class ApiAction(
   val component: String,
   val action: String,
   val subcomponent: String? = null,
   val parameters: String? = null,
+  @SerialName("app_id")
   val appId: String? = null
 )
 
@@ -150,6 +186,8 @@ sealed class Command(
     val peripheral: Peripheral,
     override val description: String,
   ) : Command(description)
+
+  object UnsupportedCommand: Command("This command is currently not supported")
 }
 
 enum class Peripheral {
