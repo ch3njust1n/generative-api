@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ENV DJANGO_SETTINGS_MODULE=server.server.settings
+ENV PYTHONPATH=/app/server
+
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 RUN pip install pytest black
