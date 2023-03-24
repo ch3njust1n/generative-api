@@ -52,8 +52,6 @@ class MainActivity : ComponentActivity() {
       App()
     }
   }
-
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +97,7 @@ fun App() {
     if (state.commandQueue.isEmpty()) return@LaunchedEffect
     when (val command = state.commandQueue.first()) {
       is Command.AppCommand -> {
-        if(command.deeplink.isNotEmpty()) {
+        if(!command.deeplink.isNullOrEmpty()) {
           val intent = Intent(ACTION_VIEW, Uri.parse(command.deeplink))
           appLauncher.launch(intent)
         } else {
@@ -166,8 +164,8 @@ fun App() {
           verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
           horizontalAlignment = Alignment.Start
         ) {
-          items(state.promptQueue) { message ->
-            SpeechBubble(content = message.content)
+          items(state.promptDisplay) { message ->
+            SpeechBubble(content = message)
           }
 
         }
@@ -178,7 +176,7 @@ fun App() {
         ) {
           TextField(modifier = Modifier.weight(1f), value = state.currentPrompt, onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) })
           IconButton(onClick = { viewModel.action(AppAction.Submit(state.currentPrompt)) }) {
-            Icon(imageVector = Icons.Rounded.Send, contentDescription = "Send")
+            Icon(imageVector = Icons.Rounded.Send, tint = MaterialTheme.colorScheme.inversePrimary, contentDescription = "Send")
           }
         }
       }

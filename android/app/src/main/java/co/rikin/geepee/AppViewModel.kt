@@ -31,7 +31,7 @@ class AppViewModel : ViewModel() {
         )
         val initialList = listOf(initialMessage)
 
-        state = state.copy(initializing = false, promptQueue = initialList)
+        state = state.copy(initializing = true, promptQueue = initialList)
 
         viewModelScope.launch(Dispatchers.IO) {
           val response = GptClient.service.chat(
@@ -43,6 +43,7 @@ class AppViewModel : ViewModel() {
           val message = response.choices.first().message
 
           state = state.copy(
+            initializing = false,
             promptQueue = state.promptQueue.toMutableList().apply {
               add(message)
               toList()
@@ -62,6 +63,10 @@ class AppViewModel : ViewModel() {
             )
             toList()
           },
+          promptDisplay = state.promptDisplay.toMutableList().apply {
+            add(action.prompt)
+            toList()
+          }
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -83,11 +88,12 @@ class AppViewModel : ViewModel() {
                 )
               }
               "app" -> {
-                if(action.appId != null) {
+                if(action.appPackage != null) {
                   Command.AppCommand(
-                    appId = action.appId,
-                    deeplink = "",
-                    description = action.parameters ?: ""
+                    appId = action.appPackage,
+                    deeplink = action.parameters?.deeplink,
+                    url = action.parameters?.url,
+                    description = action.action
                   )
                 } else {
                   Command.UnsupportedCommand
@@ -141,6 +147,7 @@ class AppViewModel : ViewModel() {
 data class AppState(
   val initializing: Boolean = false,
   val promptQueue: List<ChatMessage> = emptyList(),
+  val promptDisplay: List<String> = emptyList(),
   val commandDisplay: List<Command> = emptyList(),
   val commandQueue: List<Command> = emptyList(),
   val currentPrompt: String = ""
@@ -166,9 +173,19 @@ data class ApiAction(
   val component: String,
   val action: String,
   val subcomponent: String? = null,
-  val parameters: String? = null,
-  @SerialName("app_id")
-  val appId: String? = null
+  @SerialName("package")
+  val appPackage: String? = null,
+  @SerialName("parameters")
+  val parameters: ActionParameters? = null,
+)
+
+@Serializable
+data class ActionParameters(
+  val deeplink: String? = null,
+  val url: String? = null,
+  val content: String? = null,
+  @SerialName("phone_number")
+  val phoneNumber: String? = null
 )
 
 sealed class Command(
@@ -176,9 +193,9 @@ sealed class Command(
 ) {
   data class AppCommand(
     val appId: String,
-    val deeplink: String,
+    val deeplink: String?,
+    val url: String?,
     override val description: String,
-    val extra: String? = null,
   ) : Command(description)
 
   data class SystemCommand(
