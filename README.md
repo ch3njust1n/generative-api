@@ -1,4 +1,4 @@
-# gpt4-weekend
+# Generative APIs with Large Language Models
 
 [Model README](backend/model/README.md)
 
