@@ -5,6 +5,9 @@
 [Backend README](backend/README.md)
 
 
+https://user-images.githubusercontent.com/3211697/228732388-f92f3da0-3e1a-4d8b-ac9d-c8ac9fd2e514.mp4
+
+
 ### API 
 * Initially generated with the help of GPT-3.5 and further refined by GPT-4.
 
