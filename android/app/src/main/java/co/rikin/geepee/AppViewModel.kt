@@ -133,20 +133,6 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
         )
       }
 
-      AppAction.ClearCommands -> {
-        state = state.copy(
-          commandDisplay = emptyList()
-        )
-      }
-
-      AppAction.OpenCamera -> {
-
-      }
-
-      AppAction.SendToTwitter -> {
-
-      }
-
       AppAction.Advance -> {
         state = state.copy(
           commandQueue = state.commandQueue.drop(1)
@@ -191,9 +177,6 @@ sealed class AppAction {
   object InitialSetup : AppAction()
   class UpdatePrompt(val text: String) : AppAction()
   class Submit(val prompt: String) : AppAction()
-  object ClearCommands : AppAction()
-  object OpenCamera : AppAction()
-  object SendToTwitter : AppAction()
   object Advance : AppAction()
   object StartRecording : AppAction()
   object StopRecording : AppAction()
