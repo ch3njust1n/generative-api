@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -45,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -206,15 +206,15 @@ fun App() {
                 viewModel.action(AppAction.StopRecording)
               })
             },
-            imageVector = Icons.Rounded.Phone,
+            painter = painterResource(id = R.drawable.ic_microphone),
             tint = MaterialTheme.colorScheme.inversePrimary,
-            contentDescription = "Send"
+            contentDescription = "Speak"
           )
           Icon(
             modifier = Modifier.clickable {
-                viewModel.action(AppAction.Submit(viewModel.state.currentPrompt))
+              viewModel.action(AppAction.Submit(viewModel.state.currentPrompt))
             },
-            imageVector = Icons.Rounded.Send,
+            painter = painterResource(id = R.drawable.ic_chat),
             tint = MaterialTheme.colorScheme.inversePrimary,
             contentDescription = "Send"
           )
@@ -242,7 +242,11 @@ fun SpeechBubble(content: String) {
       )
       .padding(16.dp)
   ) {
-    Text(text = content, color = MaterialTheme.colorScheme.onPrimary)
+    Text(
+      text = content,
+      color = MaterialTheme.colorScheme.onPrimary,
+      style = MaterialTheme.typography.bodyLarge
+    )
   }
 }
 

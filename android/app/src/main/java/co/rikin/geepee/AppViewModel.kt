@@ -52,13 +52,14 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
 
           val message = response.choices.first().message
 
-          state = state.copy(
-            initializing = false,
-            promptQueue = state.promptQueue.toMutableList().apply {
-              add(message)
-              toList()
-            }
-          )
+          state =
+            state.copy(
+              initializing = false,
+              promptQueue = state.promptQueue.toMutableList().apply {
+                add(message)
+                toList()
+              }
+            )
         }
       }
 
@@ -194,10 +195,8 @@ data class ApiAction(
   val component: String,
   val action: String,
   val subcomponent: String? = null,
-  @SerialName("package")
-  val appPackage: String? = null,
-  @SerialName("parameters")
-  val parameters: ActionParameters? = null,
+  @SerialName("package") val appPackage: String? = null,
+  @SerialName("parameters") val parameters: ActionParameters? = null,
 )
 
 @Serializable
@@ -205,8 +204,7 @@ data class ActionParameters(
   val deeplink: String? = null,
   val url: String? = null,
   val content: String? = null,
-  @SerialName("phone_number")
-  val phoneNumber: String? = null
+  @SerialName("phone_number") val phoneNumber: String? = null
 )
 
 sealed class Command(
@@ -228,6 +226,5 @@ sealed class Command(
 }
 
 enum class Peripheral {
-  Camera,
-  ScreenRecorder
+  Camera, ScreenRecorder
 }
