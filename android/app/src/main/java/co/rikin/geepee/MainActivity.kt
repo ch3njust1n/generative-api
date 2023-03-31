@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -64,13 +67,21 @@ fun App() {
       put(MediaStore.Images.Media.DISPLAY_NAME, "test_photo_$timestamp.jpg")
       put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
     }
-    return context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+    return context.contentResolver.insert(
+      MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+      contentValues
+    )
   }
 
   val context = LocalContext.current
-  val viewModel = viewModel<AppViewModel>()
-  val state = viewModel.state
   val uri = createImageUri(context)
+
+  val viewModel = viewModel<AppViewModel>(
+    factory = AppViewModelFactory(
+      speechToText = RealSpeechToText(context)
+    )
+  )
+  val state = viewModel.state
 
   val permissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission()
@@ -85,19 +96,20 @@ fun App() {
     viewModel.action(AppAction.Advance)
   }
 
-  val photoLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicture()) { success ->
+  val photoLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.TakePicture()
+  ) { success ->
     if (success) {
       Log.d("GeePee", uri.toString())
     }
     viewModel.action(AppAction.Advance)
   }
 
-
   LaunchedEffect(state.commandQueue) {
     if (state.commandQueue.isEmpty()) return@LaunchedEffect
     when (val command = state.commandQueue.first()) {
       is Command.AppCommand -> {
-        if(!command.deeplink.isNullOrEmpty()) {
+        if (!command.deeplink.isNullOrEmpty()) {
           val intent = Intent(ACTION_VIEW, Uri.parse(command.deeplink))
           appLauncher.launch(intent)
         } else {
@@ -174,9 +186,28 @@ fun App() {
           horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          TextField(modifier = Modifier.weight(1f), value = state.currentPrompt, onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) })
+          TextField(
+            modifier = Modifier.weight(1f),
+            value = state.currentPrompt,
+            onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) })
+          Icon(
+            modifier = Modifier.pointerInput(Unit) {
+              detectTapGestures(onPress = {
+                viewModel.action(AppAction.StartRecording)
+                awaitRelease()
+                viewModel.action(AppAction.StopRecording)
+              })
+            },
+            imageVector = Icons.Rounded.Phone,
+            tint = MaterialTheme.colorScheme.inversePrimary,
+            contentDescription = "Send"
+          )
           IconButton(onClick = { viewModel.action(AppAction.Submit(state.currentPrompt)) }) {
-            Icon(imageVector = Icons.Rounded.Send, tint = MaterialTheme.colorScheme.inversePrimary, contentDescription = "Send")
+            Icon(
+              imageVector = Icons.Rounded.Send,
+              tint = MaterialTheme.colorScheme.inversePrimary,
+              contentDescription = "Send"
+            )
           }
         }
       }
