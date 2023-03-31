@@ -20,11 +20,11 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -34,12 +34,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Phone
-import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -58,14 +54,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.Bittersweet
-import co.rikin.geepee.ui.theme.Earth
 import co.rikin.geepee.ui.theme.Eerie
 import co.rikin.geepee.ui.theme.GeePeeTheme
 import co.rikin.geepee.ui.theme.Onyx
 import co.rikin.geepee.ui.theme.PeachYellow
 import co.rikin.geepee.ui.theme.Sage
 import co.rikin.geepee.ui.theme.Space
-import co.rikin.geepee.ui.theme.Wine
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,85 +166,77 @@ fun App() {
   }
 
   GeePeeTheme {
-    if (viewModel.state.initializing) {
-      Box(
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(color = Eerie)
+        .windowInsetsPadding(insets = WindowInsets.systemBars)
+        .padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(16.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      LazyColumn(
         modifier = Modifier
-          .fillMaxSize()
-          .background(color = Eerie),
-        contentAlignment = Alignment.Center
+          .fillMaxWidth()
+          .weight(1f),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
       ) {
-        Text("Initializing")
-      }
-    } else {
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(color = Eerie)
-          .windowInsetsPadding(insets = WindowInsets.systemBars)
-          .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
-        LazyColumn(
-          modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f),
-          verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
-          horizontalAlignment = Alignment.Start
-        ) {
-          items(viewModel.state.promptDisplay) { message ->
-            SpeechBubble(content = message)
-          }
-
-        }
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          TextField(
-            modifier = Modifier.weight(1f),
-            value = viewModel.state.currentPrompt,
-            shape = RoundedCornerShape(8.dp),
-            colors = TextFieldDefaults.textFieldColors(
-              textColor = PeachYellow,
-              cursorColor = PeachYellow,
-              containerColor = Onyx,
-              focusedIndicatorColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent
-            ),
-            onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) }
+        items(viewModel.state.promptDisplay) { message ->
+          SpeechBubble(
+            display = message
           )
-          Box(modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .pointerInput(Unit) {
-              detectTapGestures(onPress = {
-                viewModel.action(AppAction.StartRecording)
-                awaitRelease()
-                viewModel.action(AppAction.StopRecording)
-              })
-            }, contentAlignment = Alignment.Center) {
-            Icon(
-              painter = painterResource(id = R.drawable.ic_microphone),
-              tint = Bittersweet,
-              contentDescription = "Speak"
-            )
-          }
-          Box(modifier = Modifier
+        }
+
+      }
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        TextField(
+          modifier = Modifier.weight(1f),
+          value = viewModel.state.currentPrompt,
+          shape = RoundedCornerShape(8.dp),
+          colors = TextFieldDefaults.textFieldColors(
+            textColor = PeachYellow,
+            cursorColor = PeachYellow,
+            containerColor = Onyx,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+          ),
+          onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) }
+        )
+        Box(modifier = Modifier
+          .size(40.dp)
+          .clip(CircleShape)
+          .pointerInput(Unit) {
+            detectTapGestures(onPress = {
+              viewModel.action(AppAction.StartRecording)
+              awaitRelease()
+              viewModel.action(AppAction.StopRecording)
+            })
+          }, contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            painter = painterResource(id = R.drawable.ic_microphone),
+            tint = Bittersweet,
+            contentDescription = "Speak"
+          )
+        }
+        Box(
+          modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
             .clickable {
               viewModel.action(AppAction.Submit(viewModel.state.currentPrompt))
             },
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              painter = painterResource(id = R.drawable.ic_chat),
-              tint = Sage,
-              contentDescription = "Send"
-            )
-          }
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            painter = painterResource(id = R.drawable.ic_chat),
+            tint = Sage,
+            contentDescription = "Send"
+          )
         }
       }
     }
@@ -265,7 +251,16 @@ fun AppPlayground() {
 }
 
 @Composable
-fun SpeechBubble(content: String) {
+fun SpeechBubble(display: PromptDisplay) {
+  val textColor = when(display) {
+    is PromptDisplay.System -> {
+      Sage
+    }
+    is PromptDisplay.User -> {
+      PeachYellow
+    }
+  }
+
   Box(
     modifier = Modifier
       .wrapContentSize()
@@ -276,7 +271,8 @@ fun SpeechBubble(content: String) {
       .padding(16.dp)
   ) {
     Text(
-      text = content,
+      text = display.content,
+      color = textColor
     )
   }
 }
@@ -285,6 +281,8 @@ fun SpeechBubble(content: String) {
 @Composable
 fun SpeechBubblePreview() {
   GeePeeTheme {
-    SpeechBubble("Take a picture")
+    Column {
+      SpeechBubble(display = PromptDisplay.User("Take a picture"))
+    }
   }
 }
