@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import co.rikin.geepee.ui.InitialPrompt
 import kotlinx.coroutines.Dispatchers
@@ -14,11 +15,20 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
-class AppViewModel : ViewModel() {
+class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
 
   init {
-    action(AppAction.InitialSetup())
+    action(AppAction.InitialSetup)
+    viewModelScope.launch {
+      with(speechToText) {
+        speech.collect { text ->
+          state = state.copy(
+            currentPrompt = state.currentPrompt + text
+          )
+        }
+      }
+    }
   }
 
   fun action(action: AppAction) {
@@ -80,15 +90,16 @@ class AppViewModel : ViewModel() {
           Log.d("GeePee", message.content)
           val apiActions = Json.decodeFromString<ApiActions>(message.content)
           val commands = apiActions.actions.map { action ->
-            when(action.component) {
+            when (action.component) {
               "camera" -> {
                 Command.SystemCommand(
                   peripheral = Peripheral.Camera,
                   description = action.action
                 )
               }
+
               "app" -> {
-                if(action.appPackage != null) {
+                if (action.appPackage != null) {
                   Command.AppCommand(
                     appId = action.appPackage,
                     deeplink = action.parameters?.deeplink,
@@ -99,6 +110,7 @@ class AppViewModel : ViewModel() {
                   Command.UnsupportedCommand
                 }
               }
+
               else -> {
                 Command.UnsupportedCommand
               }
@@ -121,26 +133,34 @@ class AppViewModel : ViewModel() {
         )
       }
 
-      AppAction.ClearCommands -> {
-        state = state.copy(
-          commandDisplay = emptyList()
-        )
-      }
-
-      AppAction.OpenCamera -> {
-
-      }
-
-      AppAction.SendToTwitter -> {
-
-      }
-
       AppAction.Advance -> {
         state = state.copy(
           commandQueue = state.commandQueue.drop(1)
         )
       }
+
+      is AppAction.Recording -> {
+        state = state.copy(
+          currentPrompt = state.currentPrompt + action.text
+        )
+      }
+
+      AppAction.StartRecording -> {
+        speechToText.start()
+      }
+
+      AppAction.StopRecording -> {
+        speechToText.stop()
+      }
     }
+  }
+}
+
+@Suppress("UNCHECKED_CAST")
+class AppViewModelFactory(private val speechToText: SpeechToText) :
+  ViewModelProvider.NewInstanceFactory() {
+  override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    return AppViewModel(speechToText) as T
   }
 }
 
@@ -154,13 +174,13 @@ data class AppState(
 )
 
 sealed class AppAction {
-  class InitialSetup() : AppAction()
+  object InitialSetup : AppAction()
   class UpdatePrompt(val text: String) : AppAction()
   class Submit(val prompt: String) : AppAction()
-  object ClearCommands : AppAction()
-  object OpenCamera : AppAction()
-  object SendToTwitter : AppAction()
   object Advance : AppAction()
+  object StartRecording : AppAction()
+  object StopRecording : AppAction()
+  class Recording(val text: String) : AppAction()
 }
 
 @Serializable
@@ -203,7 +223,7 @@ sealed class Command(
     override val description: String,
   ) : Command(description)
 
-  object UnsupportedCommand: Command("This command is currently not supported")
+  object UnsupportedCommand : Command("This command is currently not supported")
 }
 
 enum class Peripheral {
