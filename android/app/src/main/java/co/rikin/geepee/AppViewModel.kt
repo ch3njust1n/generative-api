@@ -76,7 +76,8 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
           promptDisplay = state.promptDisplay.toMutableList().apply {
             add(action.prompt)
             toList()
-          }
+          },
+          currentPrompt = ""
         )
 
         viewModelScope.launch(Dispatchers.IO) {
