@@ -14,6 +14,7 @@ val quicksand = FontFamily(
 )
 val Typography = Typography(
   bodyLarge = TextStyle(
+    color = PeachYellow,
     fontFamily = quicksand,
     fontWeight = FontWeight.SemiBold,
     fontSize = 16.sp,

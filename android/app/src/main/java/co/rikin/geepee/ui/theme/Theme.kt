@@ -59,7 +59,7 @@ fun GeePeeTheme(
     SideEffect {
       val window = (view.context as Activity).window
       window.statusBarColor = Color.TRANSPARENT
-      WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+      WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
     }
   }
 

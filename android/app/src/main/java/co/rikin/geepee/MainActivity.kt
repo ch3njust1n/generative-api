@@ -26,11 +26,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Phone
@@ -45,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +57,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import co.rikin.geepee.ui.theme.Bittersweet
+import co.rikin.geepee.ui.theme.Earth
+import co.rikin.geepee.ui.theme.Eerie
 import co.rikin.geepee.ui.theme.GeePeeTheme
+import co.rikin.geepee.ui.theme.Onyx
+import co.rikin.geepee.ui.theme.PeachYellow
+import co.rikin.geepee.ui.theme.Sage
+import co.rikin.geepee.ui.theme.Space
+import co.rikin.geepee.ui.theme.Wine
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -165,7 +176,7 @@ fun App() {
       Box(
         modifier = Modifier
           .fillMaxSize()
-          .background(color = MaterialTheme.colorScheme.background),
+          .background(color = Eerie),
         contentAlignment = Alignment.Center
       ) {
         Text("Initializing")
@@ -174,7 +185,7 @@ fun App() {
       Column(
         modifier = Modifier
           .fillMaxSize()
-          .background(color = MaterialTheme.colorScheme.background)
+          .background(color = Eerie)
           .windowInsetsPadding(insets = WindowInsets.systemBars)
           .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -194,7 +205,7 @@ fun App() {
         }
         Row(
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
           verticalAlignment = Alignment.CenterVertically
         ) {
           TextField(
@@ -202,31 +213,44 @@ fun App() {
             value = viewModel.state.currentPrompt,
             shape = RoundedCornerShape(8.dp),
             colors = TextFieldDefaults.textFieldColors(
+              textColor = PeachYellow,
+              cursorColor = PeachYellow,
+              containerColor = Onyx,
               focusedIndicatorColor = Color.Transparent,
               unfocusedIndicatorColor = Color.Transparent
             ),
             onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) }
           )
-          Icon(
-            modifier = Modifier.pointerInput(Unit) {
+          Box(modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .pointerInput(Unit) {
               detectTapGestures(onPress = {
                 viewModel.action(AppAction.StartRecording)
                 awaitRelease()
                 viewModel.action(AppAction.StopRecording)
               })
-            },
-            painter = painterResource(id = R.drawable.ic_microphone),
-            tint = MaterialTheme.colorScheme.inversePrimary,
-            contentDescription = "Speak"
-          )
-          Icon(
-            modifier = Modifier.clickable {
+            }, contentAlignment = Alignment.Center) {
+            Icon(
+              painter = painterResource(id = R.drawable.ic_microphone),
+              tint = Bittersweet,
+              contentDescription = "Speak"
+            )
+          }
+          Box(modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable {
               viewModel.action(AppAction.Submit(viewModel.state.currentPrompt))
             },
-            painter = painterResource(id = R.drawable.ic_chat),
-            tint = MaterialTheme.colorScheme.inversePrimary,
-            contentDescription = "Send"
-          )
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              painter = painterResource(id = R.drawable.ic_chat),
+              tint = Sage,
+              contentDescription = "Send"
+            )
+          }
         }
       }
     }
@@ -246,15 +270,13 @@ fun SpeechBubble(content: String) {
     modifier = Modifier
       .wrapContentSize()
       .background(
-        color = MaterialTheme.colorScheme.primary,
+        color = Space,
         shape = RoundedCornerShape(16.dp)
       )
       .padding(16.dp)
   ) {
     Text(
       text = content,
-      color = MaterialTheme.colorScheme.onPrimary,
-      style = MaterialTheme.typography.bodyLarge
     )
   }
 }
