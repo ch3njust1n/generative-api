@@ -16,7 +16,7 @@ object GptClient {
 
   private val client = OkHttpClient.Builder()
     .addInterceptor(AuthInterceptor)
-    .readTimeout(60, TimeUnit.SECONDS)
+    .readTimeout(2, TimeUnit.MINUTES)
     .build()
 
   private val retrofit = Retrofit.Builder()

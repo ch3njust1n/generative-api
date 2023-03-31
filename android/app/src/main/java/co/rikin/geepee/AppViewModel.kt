@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import co.rikin.geepee.PromptDisplay.System
+import co.rikin.geepee.PromptDisplay.User
 import co.rikin.geepee.ui.InitialPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,7 +43,15 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
         )
         val initialList = listOf(initialMessage)
 
-        state = state.copy(initializing = true, promptQueue = initialList)
+        state = state.copy(
+          initializing = true,
+          promptQueue = initialList,
+          promptDisplay = listOf(
+            System(
+              "✨ Getting things ready..."
+            )
+          )
+        )
 
         viewModelScope.launch(Dispatchers.IO) {
           val response = GptClient.service.chat(
@@ -52,13 +62,19 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
 
           val message = response.choices.first().message
 
-          state = state.copy(
-            initializing = false,
-            promptQueue = state.promptQueue.toMutableList().apply {
-              add(message)
-              toList()
-            }
-          )
+          state =
+            state.copy(
+              initializing = false,
+              promptQueue = state.promptQueue.toMutableList().apply {
+                add(message)
+                toList()
+              },
+              promptDisplay = listOf(
+                System(
+                  "👋🏽 How can I help?"
+                )
+              )
+            )
         }
       }
 
@@ -74,9 +90,15 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
             toList()
           },
           promptDisplay = state.promptDisplay.toMutableList().apply {
-            add(action.prompt)
+            add(
+              User(action.prompt),
+            )
+            add(
+              System("💬 Working on it..."),
+            )
             toList()
-          }
+          },
+          currentPrompt = ""
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -122,6 +144,7 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
               add(message)
               toList()
             },
+            promptDisplay = state.promptDisplay.dropLast(1),
             commandQueue = commands
           )
         }
@@ -167,11 +190,16 @@ class AppViewModelFactory(private val speechToText: SpeechToText) :
 data class AppState(
   val initializing: Boolean = false,
   val promptQueue: List<ChatMessage> = emptyList(),
-  val promptDisplay: List<String> = emptyList(),
+  val promptDisplay: List<PromptDisplay> = emptyList(),
   val commandDisplay: List<Command> = emptyList(),
   val commandQueue: List<Command> = emptyList(),
   val currentPrompt: String = ""
 )
+
+sealed class PromptDisplay(val content: String) {
+  class User(content: String): PromptDisplay(content)
+  class System(content: String): PromptDisplay(content)
+}
 
 sealed class AppAction {
   object InitialSetup : AppAction()
@@ -193,10 +221,8 @@ data class ApiAction(
   val component: String,
   val action: String,
   val subcomponent: String? = null,
-  @SerialName("package")
-  val appPackage: String? = null,
-  @SerialName("parameters")
-  val parameters: ActionParameters? = null,
+  @SerialName("package") val appPackage: String? = null,
+  @SerialName("parameters") val parameters: ActionParameters? = null,
 )
 
 @Serializable
@@ -204,8 +230,7 @@ data class ActionParameters(
   val deeplink: String? = null,
   val url: String? = null,
   val content: String? = null,
-  @SerialName("phone_number")
-  val phoneNumber: String? = null
+  @SerialName("phone_number") val phoneNumber: String? = null
 )
 
 sealed class Command(
@@ -227,6 +252,5 @@ sealed class Command(
 }
 
 enum class Peripheral {
-  Camera,
-  ScreenRecorder
+  Camera, ScreenRecorder
 }
