@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,10 +37,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,6 +63,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
+  val context = LocalContext.current
 
   fun createImageUri(context: Context): Uri? {
     val timestamp = System.currentTimeMillis()
@@ -73,7 +77,6 @@ fun App() {
     )
   }
 
-  val context = LocalContext.current
   val uri = createImageUri(context)
 
   val viewModel = viewModel<AppViewModel>(
@@ -81,7 +84,6 @@ fun App() {
       speechToText = RealSpeechToText(context)
     )
   )
-  val state = viewModel.state
 
   val permissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission()
@@ -105,9 +107,9 @@ fun App() {
     viewModel.action(AppAction.Advance)
   }
 
-  LaunchedEffect(state.commandQueue) {
-    if (state.commandQueue.isEmpty()) return@LaunchedEffect
-    when (val command = state.commandQueue.first()) {
+  LaunchedEffect(viewModel.state.commandQueue) {
+    if (viewModel.state.commandQueue.isEmpty()) return@LaunchedEffect
+    when (val command = viewModel.state.commandQueue.first()) {
       is Command.AppCommand -> {
         if (!command.deeplink.isNullOrEmpty()) {
           val intent = Intent(ACTION_VIEW, Uri.parse(command.deeplink))
@@ -151,7 +153,7 @@ fun App() {
   }
 
   GeePeeTheme {
-    if (state.initializing) {
+    if (viewModel.state.initializing) {
       Box(
         modifier = Modifier
           .fillMaxSize()
@@ -176,20 +178,26 @@ fun App() {
           verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
           horizontalAlignment = Alignment.Start
         ) {
-          items(state.promptDisplay) { message ->
+          items(viewModel.state.promptDisplay) { message ->
             SpeechBubble(content = message)
           }
 
         }
         Row(
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+          horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
           verticalAlignment = Alignment.CenterVertically
         ) {
           TextField(
             modifier = Modifier.weight(1f),
-            value = state.currentPrompt,
-            onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) })
+            value = viewModel.state.currentPrompt,
+            shape = RoundedCornerShape(8.dp),
+            colors = TextFieldDefaults.textFieldColors(
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent
+            ),
+            onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) }
+          )
           Icon(
             modifier = Modifier.pointerInput(Unit) {
               detectTapGestures(onPress = {
@@ -202,13 +210,14 @@ fun App() {
             tint = MaterialTheme.colorScheme.inversePrimary,
             contentDescription = "Send"
           )
-          IconButton(onClick = { viewModel.action(AppAction.Submit(state.currentPrompt)) }) {
-            Icon(
-              imageVector = Icons.Rounded.Send,
-              tint = MaterialTheme.colorScheme.inversePrimary,
-              contentDescription = "Send"
-            )
-          }
+          Icon(
+            modifier = Modifier.clickable {
+                viewModel.action(AppAction.Submit(viewModel.state.currentPrompt))
+            },
+            imageVector = Icons.Rounded.Send,
+            tint = MaterialTheme.colorScheme.inversePrimary,
+            contentDescription = "Send"
+          )
         }
       }
     }
