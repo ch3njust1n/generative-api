@@ -9,7 +9,11 @@ Join us on [Discord](https://discord.com/invite/y934qSHE).
 Check out our blog on [Generative APIs with Large Language Models](https://medium.com/@ch3njust1n/generative-apis-with-large-language-models-987108f52d1f) for more details on how we integrated LLM to create this LUI.
 
 
+### Initial LLM-powered LUI with Text demo:
 https://user-images.githubusercontent.com/3211697/228732388-f92f3da0-3e1a-4d8b-ac9d-c8ac9fd2e514.mp4
+
+### Speech-to-text LLM-powered LUI demo:
+https://user-images.githubusercontent.com/3211697/229305091-a363b114-dd13-4d8b-8713-b09c000b3997.mp4
 
 
 ### API 
