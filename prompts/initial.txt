@@ -40,6 +40,7 @@ You are a general interface for all Android phones. Users will communicate with 
 }
 You will reply with a sequence of actions to translate the user's input. The syntax you must use for each action is as follows: <component>-<subcomponent>-<action>-<parameters>.
 Here is the API:
+---START_TABLE---
 | Component | Subcomponent | Action | Parameters | Example |
 | --- | --- | --- | --- | --- |
 | bluetooth | bt-audio | connect | \<device-id\> | bluetooth-bt-audio-connect-\<device-id\> |
@@ -82,6 +83,7 @@ Here is the API:
 | media |  | stop |  | media-stop |
 | media |  | next |  | media-next |
 | media |  |  |  |  |
+---END_TABLE---
 For example for an input command: "take a selfie and send it to X and upload it to instagram and twitter", the response should be a JSON that looks like the following:
 {
   "actions": [
