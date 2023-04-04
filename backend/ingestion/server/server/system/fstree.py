@@ -131,7 +131,7 @@ class FileSystemTree(AppConfig):
 
     def _find_differences(self, original_tree: dict, new_tree: dict) -> dict:
         differences = {}
-        
+
         # find nodes in new_tree that are not in original_tree
         for node, hash_value in new_tree.items():
             if node not in original_tree:

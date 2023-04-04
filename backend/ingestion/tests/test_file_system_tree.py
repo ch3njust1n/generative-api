@@ -51,21 +51,44 @@ class TestFileSystemTree(unittest.TestCase):
 
     def test_get_system_info(self) -> None:
         # get system info using the function
-        with FileSystemTree(
-                self.test_uri, self.test_user, self.test_password
-            ) as fst:
+        with FileSystemTree(self.test_uri, self.test_user, self.test_password) as fst:
             system_info = fst.get_system_info()
 
             # verify that the output is correct
             assert isinstance(system_info, dict)
-            assert "platform" in system_info and system_info["platform"] == platform.system()
-            assert "platform-release" in system_info and system_info["platform-release"] == platform.release()
-            assert "platform-version" in system_info and system_info["platform-version"] == platform.version()
-            assert "architecture" in system_info and system_info["architecture"] == platform.machine()
-            assert "hostname" in system_info and system_info["hostname"] == platform.node()
-            assert "processor" in system_info and system_info["processor"] == platform.processor()
-            assert "ram" in system_info and isinstance(system_info["ram"], str) and "GB" in system_info["ram"]
-            assert "uptime" in system_info and isinstance(system_info["uptime"], int) and system_info["uptime"] > 0
+            assert (
+                "platform" in system_info
+                and system_info["platform"] == platform.system()
+            )
+            assert (
+                "platform-release" in system_info
+                and system_info["platform-release"] == platform.release()
+            )
+            assert (
+                "platform-version" in system_info
+                and system_info["platform-version"] == platform.version()
+            )
+            assert (
+                "architecture" in system_info
+                and system_info["architecture"] == platform.machine()
+            )
+            assert (
+                "hostname" in system_info and system_info["hostname"] == platform.node()
+            )
+            assert (
+                "processor" in system_info
+                and system_info["processor"] == platform.processor()
+            )
+            assert (
+                "ram" in system_info
+                and isinstance(system_info["ram"], str)
+                and "GB" in system_info["ram"]
+            )
+            assert (
+                "uptime" in system_info
+                and isinstance(system_info["uptime"], int)
+                and system_info["uptime"] > 0
+            )
 
     def test_map_file_system(self) -> None:
         def cleanup(test_dir: str) -> None:
@@ -87,9 +110,7 @@ class TestFileSystemTree(unittest.TestCase):
             f.write("Goodbye, world!")
 
         # run the map_file_system function
-        with FileSystemTree(
-                self.test_uri, self.test_user, self.test_password
-            ) as fst:
+        with FileSystemTree(self.test_uri, self.test_user, self.test_password) as fst:
             file_tree = fst.map_file_system(test_dir)
             print(nx.to_dict_of_dicts(file_tree))
 
@@ -98,17 +119,29 @@ class TestFileSystemTree(unittest.TestCase):
             assert file_tree.has_node(test_dir)
 
             print(f'file1: {os.path.join(test_dir, "file1.txt")}')
-            print(f'tree: {nx.to_dict_of_dicts(file_tree)}')
+            print(f"tree: {nx.to_dict_of_dicts(file_tree)}")
 
             assert file_tree.has_node(os.path.join(test_dir, "file1.txt"))
             assert file_tree.has_node(os.path.join(test_dir, "subdir"))
             assert file_tree.has_node(os.path.join(test_dir, "subdir", "file2.txt"))
             assert file_tree.nodes[test_dir]["type"] == "directory"
-            assert file_tree.nodes[os.path.join(test_dir, "file1.txt")]["type"] == "file"
-            assert file_tree.nodes[os.path.join(test_dir, "subdir")]["type"] == "directory"
-            assert file_tree.nodes[os.path.join(test_dir, "subdir", "file2.txt")]["type"] == "file"
-            assert file_tree.successors(test_dir) == [os.path.join(test_dir, "file1.txt"), os.path.join(test_dir, "subdir")]
-            assert file_tree.successors(os.path.join(test_dir, "subdir")) == [os.path.join(test_dir, "subdir", "file2.txt")]
+            assert (
+                file_tree.nodes[os.path.join(test_dir, "file1.txt")]["type"] == "file"
+            )
+            assert (
+                file_tree.nodes[os.path.join(test_dir, "subdir")]["type"] == "directory"
+            )
+            assert (
+                file_tree.nodes[os.path.join(test_dir, "subdir", "file2.txt")]["type"]
+                == "file"
+            )
+            assert file_tree.successors(test_dir) == [
+                os.path.join(test_dir, "file1.txt"),
+                os.path.join(test_dir, "subdir"),
+            ]
+            assert file_tree.successors(os.path.join(test_dir, "subdir")) == [
+                os.path.join(test_dir, "subdir", "file2.txt")
+            ]
 
     def test__calculate_merkle_tree(self) -> None:
         # Create a graph with nodes and attributes
@@ -119,9 +152,7 @@ class TestFileSystemTree(unittest.TestCase):
         G.add_edge("a", "b")
         G.add_edge("a", "c")
 
-        with FileSystemTree(
-                self.test_uri, self.test_user, self.test_password
-            ) as fst:
+        with FileSystemTree(self.test_uri, self.test_user, self.test_password) as fst:
 
             # Calculate the Merkle tree
             merkle_tree = fst._calculate_merkle_tree(G)
@@ -129,27 +160,27 @@ class TestFileSystemTree(unittest.TestCase):
             # Verify the expected hash values for each node
             expected_hashes = {
                 "a": sha256(repr({"type": "directory"}).encode()).hexdigest(),
-                "b": sha256(repr({"type": "file", "name": "file1.txt"}).encode()).hexdigest(),
-                "c": sha256(repr({"type": "file", "name": "file2.txt"}).encode()).hexdigest(),
+                "b": sha256(
+                    repr({"type": "file", "name": "file1.txt"}).encode()
+                ).hexdigest(),
+                "c": sha256(
+                    repr({"type": "file", "name": "file2.txt"}).encode()
+                ).hexdigest(),
             }
             assert merkle_tree == expected_hashes
-
 
     def test__find_differences(self) -> None:
         # Create two Merkle trees
         original_tree = {"a": "hash1", "b": "hash2", "c": "hash3"}
         new_tree = {"a": "hash1", "b": "newhash", "d": "hash4"}
 
-        with FileSystemTree(
-                self.test_uri, self.test_user, self.test_password
-            ) as fst:
+        with FileSystemTree(self.test_uri, self.test_user, self.test_password) as fst:
             # Find the differences between the two trees
             differences = fst._find_differences(original_tree, new_tree)
 
             # Verify the expected differences
             expected_differences = {"b": "newhash", "c": None, "d": "hash4"}
             assert differences == expected_differences
-
 
     def test_update_graph_with_merkle_tree(self) -> None:
         # Create a graph with nodes and edges
@@ -172,9 +203,7 @@ class TestFileSystemTree(unittest.TestCase):
         new_tree.add_node("d", type="file", name="file3.txt")
         new_tree.add_edge("a", "d")
 
-        with FileSystemTree(
-                self.test_uri, self.test_user, self.test_password
-            ) as fst:
+        with FileSystemTree(self.test_uri, self.test_user, self.test_password) as fst:
 
             # Update the original graph with the differences
             updated_graph = fst.update_graph_with_merkle_tree(new_tree, graphml_file)
@@ -189,4 +218,3 @@ class TestFileSystemTree(unittest.TestCase):
 
             # Clean up the test file
             os.remove(graphml_file)
-
