@@ -1,0 +1,119 @@
+[
+  {
+    "status": "success",
+     "actions":[
+        {
+           "component":"app",
+           "action":"disable-notifications",
+           "parameters":""
+        },
+        {
+           "component":"device",
+           "action":"set-volume",
+           "parameters":"0"
+        },
+        {
+           "component":"call",
+           "action":"block-all",
+           "parameters":""
+        },
+        {
+           "component":"text",
+           "action":"block-all",
+           "parameters":""
+        },
+        {
+           "component":"call",
+           "action":"unblock",
+           "parameters":"555-555-5555"
+        },
+        {
+           "component":"text",
+           "action":"unblock",
+           "parameters":"555-555-5555"
+        }
+     ]
+  },
+  {
+     "status": "fail",
+     "command":"Save this command as study mode",
+     "state":{
+        "device":{
+           "model":"Phone Model",
+           "os_version":"OS Version",
+           "hardware_specs":"Hardware Specifications"
+        },
+        "battery":{
+           "level":"Battery Level",
+           "charging_status":"Charging Status"
+        },
+        "connectivity":{
+           "wifi_status":"Wi-Fi Status",
+           "cellular_status":"Cellular Status",
+           "signal_strength":"Signal Strength",
+           "network_type":"Network Type"
+        },
+        "bluetooth":{
+           "status":"Bluetooth Status",
+           "paired_devices":"List of Paired Devices"
+        },
+        "active_apps":[
+           "List of Currently Running Apps"
+        ],
+        "contacts":[
+           "List of Contacts"
+        ],
+        "permissions":[
+           "List of App Permissions"
+        ],
+        "files":[
+           "List of File Paths and Metadata"
+        ],
+        "notifications":[
+           "List of Recent Notifications"
+        ]
+     }
+  },
+  {
+     "status": "fail",
+     "actions":[
+        {
+           "component":"device",
+           "action":"save-custom-mode",
+           "parameters":"study-mode",
+           "commands":[
+              {
+                 "component":"app",
+                 "action":"disable-notifications",
+                 "parameters":""
+              },
+              {
+                 "component":"device",
+                 "action":"set-volume",
+                 "parameters":"0"
+              },
+              {
+                 "component":"call",
+                 "action":"block-all",
+                 "parameters":""
+              },
+              {
+                 "component":"text",
+                 "action":"block-all",
+                 "parameters":""
+              },
+              {
+                 "component":"call",
+                 "action":"unblock",
+                 "parameters":"555-555-5555"
+              },
+              {
+                 "component":"text",
+                 "action":"unblock",
+                 "parameters":"555-555-5555"
+              }
+           ]
+        }
+     ]
+  }
+]
