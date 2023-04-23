@@ -5,6 +5,8 @@ build/
 # Local configuration file (sdk path, etc)
 local.properties
 env.properties
+env.dev.properties
+env.prod.properties
 
 # Log/OS Files
 *.log
