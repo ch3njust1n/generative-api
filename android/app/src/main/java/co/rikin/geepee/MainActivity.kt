@@ -94,7 +94,8 @@ fun App() {
 
   val viewModel = viewModel<AppViewModel>(
     factory = AppViewModelFactory(
-      speechToText = RealSpeechToText(context)
+      speechToText = RealSpeechToText(context),
+      context = context
     )
   )
 

@@ -1,6 +1,8 @@
 package co.rikin.geepee
 
 import android.util.Log
+import android.content.Context
+import android.os.Environment
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import co.rikin.geepee.PromptDisplay.System
 import co.rikin.geepee.PromptDisplay.User
 import co.rikin.geepee.ui.InitialPrompt
+import co.rikin.geepee.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
@@ -17,10 +20,18 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
-class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
+class AppViewModel(private val speechToText: SpeechToText, private val context: Context) : ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
+  private val logger = Logger(context)
+
+  private fun someFunction() {
+    logger.logToFile("AppViewModel", "This is a log message.")
+  }
 
   init {
+    val logFile = logger.getLogFile()
+    Log.d("LogFile", "Path: ${logFile.absolutePath}, Size: ${logFile.length()}")
+    
     action(AppAction.InitialSetup)
     viewModelScope.launch {
       with(speechToText) {
@@ -35,6 +46,7 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
 
   fun action(action: AppAction) {
     Log.d("Actions", action.toString())
+    logger.logToFile("Actions", action.toString())
     when (action) {
       is AppAction.InitialSetup -> {
         val initialMessage = ChatMessage(
@@ -109,7 +121,8 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
           )
 
           val message = response.choices.first().message
-          Log.d("GeePee", message.content)
+          Log.d("Debug", context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString())
+          logger.logToFile("GeePee", message.content)
           val apiActions = Json.decodeFromString<ApiActions>(message.content)
           val commands = apiActions.actions.map { action ->
             when (action.component) {
@@ -129,11 +142,13 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
                     description = action.action
                   )
                 } else {
+                  logger.logToFile("GeePee", "UnsupportedCommand")
                   Command.UnsupportedCommand
                 }
               }
 
               else -> {
+                logger.logToFile("GeePee", "UnsupportedCommand")
                 Command.UnsupportedCommand
               }
             }
@@ -180,10 +195,10 @@ class AppViewModel(private val speechToText: SpeechToText) : ViewModel() {
 }
 
 @Suppress("UNCHECKED_CAST")
-class AppViewModelFactory(private val speechToText: SpeechToText) :
+class AppViewModelFactory(private val speechToText: SpeechToText, private val context: Context) :
   ViewModelProvider.NewInstanceFactory() {
   override fun <T : ViewModel> create(modelClass: Class<T>): T {
-    return AppViewModel(speechToText) as T
+    return AppViewModel(speechToText, context) as T
   }
 }
 
