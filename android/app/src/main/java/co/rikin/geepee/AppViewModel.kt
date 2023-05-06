@@ -127,8 +127,14 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
           val commands = apiActions.actions.map { action ->
             when (action.component) {
               "camera" -> {
+                val peripheral: Peripheral = when (action.subcomponent) {
+                  "front" -> Peripheral.FrontCamera
+                  "back" -> Peripheral.BackCamera
+                  else -> throw IllegalArgumentException("Invalid subcomponent value: ${action.subcomponent}")
+                }
+
                 Command.SystemCommand(
-                  peripheral = Peripheral.Camera,
+                  peripheral = peripheral,
                   description = action.action
                 )
               }
@@ -267,5 +273,5 @@ sealed class Command(
 }
 
 enum class Peripheral {
-  Camera, ScreenRecorder
+  Camera, FrontCamera, BackCamera, ScreenRecorder
 }
