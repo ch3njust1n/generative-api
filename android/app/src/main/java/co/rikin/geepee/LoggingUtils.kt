@@ -18,7 +18,7 @@ class Logger(private val context: Context) {
                 logDirectory.mkdirs()
             }
 
-            val logFile = File(logDirectory, "app_log.txt")
+            val logFile = File(logDirectory, "geepee.log")
             if (!logFile.exists()) {
                 logFile.createNewFile()
             }
@@ -37,7 +37,7 @@ class Logger(private val context: Context) {
             logDirectory.mkdirs()
         }
 
-        val logFile = File(logDirectory, "app_log.txt")
+        val logFile = File(logDirectory, "geepee.log")
         if (!logFile.exists()) {
             logFile.createNewFile()
         }
