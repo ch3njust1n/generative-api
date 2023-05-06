@@ -29,6 +29,9 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
   }
 
   init {
+    val logFile = logger.getLogFile()
+    Log.d("LogFile", "Path: ${logFile.absolutePath}, Size: ${logFile.length()}")
+    
     action(AppAction.InitialSetup)
     viewModelScope.launch {
       with(speechToText) {

@@ -1,7 +1,6 @@
 package co.rikin.geepee
 
 import android.content.Context
-import android.os.Environment
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -30,5 +29,19 @@ class Logger(private val context: Context) {
         } catch (e: IOException) {
             e.printStackTrace()
         }
+    }
+
+    fun getLogFile(): File {
+        val logDirectory = File(context.filesDir, "Log")
+        if (!logDirectory.exists()) {
+            logDirectory.mkdirs()
+        }
+
+        val logFile = File(logDirectory, "app_log.txt")
+        if (!logFile.exists()) {
+            logFile.createNewFile()
+        }
+
+        return logFile
     }
 }
