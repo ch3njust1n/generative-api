@@ -2,6 +2,7 @@ package co.rikin.geepee
 
 import android.util.Log
 import android.content.Context
+import android.os.Environment
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -117,6 +118,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
           )
 
           val message = response.choices.first().message
+          Log.d("Debug", context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString())
           logger.logToFile("GeePee", message.content)
           val apiActions = Json.decodeFromString<ApiActions>(message.content)
           val commands = apiActions.actions.map { action ->

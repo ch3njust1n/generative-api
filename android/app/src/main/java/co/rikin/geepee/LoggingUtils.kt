@@ -14,7 +14,7 @@ class Logger(private val context: Context) {
         val logMessage = "$timeStamp - $tag: $message\n"
 
         try {
-            val logDirectory = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Log")
+            val logDirectory = File(context.filesDir, "Log")
             if (!logDirectory.exists()) {
                 logDirectory.mkdirs()
             }
