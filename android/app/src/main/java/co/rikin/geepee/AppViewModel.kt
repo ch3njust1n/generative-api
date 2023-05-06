@@ -42,6 +42,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
 
   fun action(action: AppAction) {
     Log.d("Actions", action.toString())
+    logger.logToFile("Actions", action.toString())
     when (action) {
       is AppAction.InitialSetup -> {
         val initialMessage = ChatMessage(
@@ -116,7 +117,6 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
           )
 
           val message = response.choices.first().message
-          Log.d("GeePee", message.content)
           logger.logToFile("GeePee", message.content)
           val apiActions = Json.decodeFromString<ApiActions>(message.content)
           val commands = apiActions.actions.map { action ->
@@ -137,11 +137,13 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
                     description = action.action
                   )
                 } else {
+                  logger.logToFile("GeePee", "UnsupportedCommand")
                   Command.UnsupportedCommand
                 }
               }
 
               else -> {
+                logger.logToFile("GeePee", "UnsupportedCommand")
                 Command.UnsupportedCommand
               }
             }
