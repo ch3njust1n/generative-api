@@ -30,7 +30,6 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
 
   init {
     val logFile = logger.getLogFile()
-    Log.d("LogFile", "Path: ${logFile.absolutePath}, Size: ${logFile.length()}")
     
     action(AppAction.InitialSetup)
     viewModelScope.launch {
@@ -93,6 +92,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
       is AppAction.Submit -> {
         state = state.copy(
           promptQueue = state.promptQueue.toMutableList().apply {
+            logger.logToFile("Prompt", action.prompt)
             add(
               ChatMessage(
                 role = "user",
