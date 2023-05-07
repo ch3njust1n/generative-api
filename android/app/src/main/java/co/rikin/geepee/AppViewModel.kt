@@ -23,6 +23,7 @@ import kotlinx.serialization.json.Json
 class AppViewModel(private val speechToText: SpeechToText, private val context: Context) : ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
   private val logger = Logger(context)
+  private val initializer = InitialPrompt(context)
 
   private fun someFunction() {
     logger.logToFile("AppViewModel", "This is a log message.")
@@ -30,7 +31,6 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
 
   init {
     val logFile = logger.getLogFile()
-    Log.d("LogFile", "Path: ${logFile.absolutePath}, Size: ${logFile.length()}")
     
     action(AppAction.InitialSetup)
     viewModelScope.launch {
@@ -51,7 +51,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
       is AppAction.InitialSetup -> {
         val initialMessage = ChatMessage(
           role = "system",
-          content = InitialPrompt
+          content = initializer.getPrompt()
         )
         val initialList = listOf(initialMessage)
 
@@ -93,6 +93,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
       is AppAction.Submit -> {
         state = state.copy(
           promptQueue = state.promptQueue.toMutableList().apply {
+            logger.logToFile("Prompt", action.prompt)
             add(
               ChatMessage(
                 role = "user",
@@ -124,11 +125,17 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
           Log.d("Debug", context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString())
           logger.logToFile("GeePee", message.content)
           val apiActions = Json.decodeFromString<ApiActions>(message.content)
-          val commands = apiActions.actions.map { action ->
+          val commands = apiActions.actions.mapNotNull { action ->
             when (action.component) {
               "camera" -> {
+                val peripheral: Peripheral = when (action.subcomponent) {
+                  "cam-fr" -> Peripheral.FrontCamera
+                  "cam-rr" -> Peripheral.BackCamera
+                  else -> throw IllegalArgumentException("Invalid subcomponent value: ${action.subcomponent}")
+                }
+
                 Command.SystemCommand(
-                  peripheral = Peripheral.Camera,
+                  peripheral = peripheral,
                   description = action.action
                 )
               }
@@ -147,19 +154,39 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
                 }
               }
 
+              "unknown" -> {
+                  if (action.ask != null) {
+                      Command.AskCommand(
+                        ask = action.ask,
+                        description = action.action
+                      )
+                  } else {
+                      logger.logToFile("GeePee", "UnsupportedCommand")
+                      Command.UnsupportedCommand
+                  }
+              }
+
               else -> {
                 logger.logToFile("GeePee", "UnsupportedCommand")
                 Command.UnsupportedCommand
+                null
               }
             }
-          }
+          }.filterIsInstance<Command>()
+
+          val firstAskCommand = commands.firstOrNull { it is Command.AskCommand } as? Command.AskCommand
 
           state = state.copy(
             promptQueue = state.promptQueue.toMutableList().apply {
               add(message)
               toList()
             },
-            promptDisplay = state.promptDisplay.dropLast(1),
+            promptDisplay = state.promptDisplay.dropLast(1).toMutableList().apply {
+                if (firstAskCommand != null) {
+                    add(System(firstAskCommand.ask))
+                }
+                toList()
+            },
             commandQueue = commands
           )
         }
@@ -236,6 +263,7 @@ data class ApiAction(
   val component: String,
   val action: String,
   val subcomponent: String? = null,
+  val ask: String? = null,
   @SerialName("package") val appPackage: String? = null,
   @SerialName("parameters") val parameters: ActionParameters? = null,
 )
@@ -258,6 +286,11 @@ sealed class Command(
     override val description: String,
   ) : Command(description)
 
+  data class AskCommand(
+      val ask: String,
+      override val description: String,
+  ) : Command(description)
+
   data class SystemCommand(
     val peripheral: Peripheral,
     override val description: String,
@@ -267,5 +300,5 @@ sealed class Command(
 }
 
 enum class Peripheral {
-  Camera, ScreenRecorder
+  Camera, FrontCamera, BackCamera, ScreenRecorder
 }

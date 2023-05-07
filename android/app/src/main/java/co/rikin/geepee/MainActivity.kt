@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraAccessException
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -41,6 +44,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +64,7 @@ import co.rikin.geepee.ui.theme.Onyx
 import co.rikin.geepee.ui.theme.PeachYellow
 import co.rikin.geepee.ui.theme.Sage
 import co.rikin.geepee.ui.theme.Space
+import co.rikin.geepee.Logger
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +82,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun App() {
   val context = LocalContext.current
+  val logger = remember { Logger(context) }
 
   fun createImageUri(context: Context): Uri? {
     val timestamp = System.currentTimeMillis()
@@ -142,15 +148,18 @@ fun App() {
 
       is Command.SystemCommand -> {
         when (command.peripheral) {
-          Peripheral.Camera -> {
+          Peripheral.Camera, Peripheral.FrontCamera, Peripheral.BackCamera -> {
             if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-              ) == PackageManager.PERMISSION_GRANTED
+                    context,
+                    Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
             ) {
-              photoLauncher.launch(uri)
+                val useFrontCamera = command.peripheral == Peripheral.FrontCamera
+                logger.logToFile("Camera", useFrontCamera.toString())
+                val cameraIntent = getCameraIntent(context, uri, useFrontCamera)
+                photoLauncher.launch(uri)
             } else {
-              permissionLauncher.launch(Manifest.permission.CAMERA)
+                permissionLauncher.launch(Manifest.permission.CAMERA)
             }
           }
 
@@ -158,6 +167,12 @@ fun App() {
 
           }
         }
+      }
+
+      is Command.AskCommand -> {
+          // Add your logic here to handle the AskCommand
+          logger.logToFile("GeePee", "AskCommand")
+          viewModel.action(AppAction.Advance)
       }
 
       Command.UnsupportedCommand -> {
@@ -244,6 +259,33 @@ fun App() {
   }
 }
 
+fun getCameraId(context: Context, useFrontCamera: Boolean): String? {
+    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    val cameraFacing = if (useFrontCamera) CameraCharacteristics.LENS_FACING_FRONT else CameraCharacteristics.LENS_FACING_BACK
+
+    try {
+        for (cameraId in cameraManager.cameraIdList) {
+            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+            if (characteristics.get(CameraCharacteristics.LENS_FACING) == cameraFacing) {
+                return cameraId
+            }
+        }
+    } catch (e: CameraAccessException) {
+        e.printStackTrace()
+    }
+    return null
+}
+
+fun getCameraIntent(context: Context, uri: Uri?, useFrontCamera: Boolean): Intent {
+    val cameraId = getCameraId(context, useFrontCamera)
+    return Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+        putExtra(MediaStore.EXTRA_OUTPUT, uri)
+        if (cameraId != null) {
+            putExtra("android.intent.extras.CAMERA_FACING", cameraId)
+        }
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+    }
+}
 
 @Preview
 @Composable
