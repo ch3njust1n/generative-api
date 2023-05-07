@@ -169,6 +169,12 @@ fun App() {
         }
       }
 
+      is Command.AskCommand -> {
+          // Add your logic here to handle the AskCommand
+          logger.logToFile("GeePee", "AskCommand")
+          viewModel.action(AppAction.Advance)
+      }
+
       Command.UnsupportedCommand -> {
         viewModel.action(AppAction.Advance)
       }

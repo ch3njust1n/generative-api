@@ -191,7 +191,6 @@ class InitialPrompt(private val context: Context) {
     promptUnknownAction() +
     promptHttpOk()
 
-    logger.logToFile("InitPrompt", initPrompt)
     return initPrompt
   }
 }
