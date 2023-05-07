@@ -23,6 +23,7 @@ import kotlinx.serialization.json.Json
 class AppViewModel(private val speechToText: SpeechToText, private val context: Context) : ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
   private val logger = Logger(context)
+  private val initializer = InitialPrompt(context)
 
   private fun someFunction() {
     logger.logToFile("AppViewModel", "This is a log message.")
@@ -50,7 +51,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
       is AppAction.InitialSetup -> {
         val initialMessage = ChatMessage(
           role = "system",
-          content = InitialPrompt
+          content = initializer.getPrompt()
         )
         val initialList = listOf(initialMessage)
 
