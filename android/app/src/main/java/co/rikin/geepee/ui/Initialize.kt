@@ -166,18 +166,19 @@ class InitialPrompt(private val context: Context) {
   }
 
   private fun getInstalledAppPackageNames(context: Context): List<String> {
-      val packageManager = context.packageManager
-      val installedPackages = packageManager.getInstalledPackages(0)
-      val packageNames = mutableListOf<String>()
+    val packageManager = context.packageManager
+    val installedPackages = packageManager.getInstalledPackages(0)
+    val packageNames = mutableListOf<String>()
 
-      for (pkgInfo in installedPackages) {
-          packageNames.add(pkgInfo.packageName)
-      }
+    for (pkgInfo in installedPackages) {
+        packageNames.add(pkgInfo.packageName)
+    }
 
-      return packageNames
+    return packageNames
   }
 
   private fun promptAvailablePackages(): String {
+    logger.logToFile("Packages", getInstalledAppPackageNames(context).toString())
     val packages = getInstalledAppPackageNames(context).toString()
     val prompt = """These are the packages available on device. For all replies, only select from this list:${System.lineSeparator()}"""
     return "$prompt$packages"
