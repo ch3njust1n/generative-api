@@ -1,14 +1,10 @@
 package co.rikin.geepee
 
 import android.Manifest
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,7 +16,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +36,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.rikin.geepee.ui.theme.Bittersweet
@@ -60,6 +55,8 @@ import co.rikin.geepee.ui.theme.Onyx
 import co.rikin.geepee.ui.theme.PeachYellow
 import co.rikin.geepee.ui.theme.Sage
 import co.rikin.geepee.ui.theme.Space
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,24 +70,14 @@ class MainActivity : ComponentActivity() {
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+@OptIn(
+  ExperimentalMaterial3Api::class,
+  ExperimentalPermissionsApi::class
+)
 @Composable
 fun App() {
   val context = LocalContext.current
-
-  fun createImageUri(context: Context): Uri? {
-    val timestamp = System.currentTimeMillis()
-    val contentValues = ContentValues().apply {
-      put(MediaStore.Images.Media.DISPLAY_NAME, "test_photo_$timestamp.jpg")
-      put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-    }
-    return context.contentResolver.insert(
-      MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-      contentValues
-    )
-  }
-
-  val uri = createImageUri(context)
 
   val viewModel = viewModel<AppViewModel>(
     factory = AppViewModelFactory(
@@ -99,12 +86,21 @@ fun App() {
     )
   )
 
-  val permissionLauncher = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.RequestPermission()
-  ) {
-    viewModel.action(AppAction.Advance)
-  }
+  val uri = createImageUri(context)
 
+  val permissionsState = rememberMultiplePermissionsState(
+    permissions = listOf(
+      Manifest.permission.CAMERA,
+      Manifest.permission.RECORD_AUDIO
+    ),
+    onPermissionsResult = {}
+  )
+
+  if (!permissionsState.allPermissionsGranted) {
+    SideEffect {
+      permissionsState.launchMultiplePermissionRequest()
+    }
+  }
 
   val appLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.StartActivityForResult()
@@ -143,19 +139,7 @@ fun App() {
       is Command.SystemCommand -> {
         when (command.peripheral) {
           Peripheral.Camera -> {
-            if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-              ) == PackageManager.PERMISSION_GRANTED
-            ) {
-              photoLauncher.launch(uri)
-            } else {
-              permissionLauncher.launch(Manifest.permission.CAMERA)
-            }
-          }
-
-          Peripheral.ScreenRecorder -> {
-
+            photoLauncher.launch(uri)
           }
         }
       }
@@ -187,7 +171,6 @@ fun App() {
             display = message
           )
         }
-
       }
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -207,16 +190,17 @@ fun App() {
           ),
           onValueChange = { viewModel.action(AppAction.UpdatePrompt(it)) }
         )
-        Box(modifier = Modifier
-          .size(40.dp)
-          .clip(CircleShape)
-          .pointerInput(Unit) {
-            detectTapGestures(onPress = {
-              viewModel.action(AppAction.StartRecording)
-              awaitRelease()
-              viewModel.action(AppAction.StopRecording)
-            })
-          }, contentAlignment = Alignment.Center
+        Box(
+          modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .pointerInput(Unit) {
+              detectTapGestures(onPress = {
+                viewModel.action(AppAction.StartRecording)
+                awaitRelease()
+                viewModel.action(AppAction.StopRecording)
+              })
+            }, contentAlignment = Alignment.Center
         ) {
           Icon(
             painter = painterResource(id = R.drawable.ic_microphone),
@@ -245,18 +229,13 @@ fun App() {
 }
 
 
-@Preview
-@Composable
-fun AppPlayground() {
-  App()
-}
-
 @Composable
 fun SpeechBubble(display: PromptDisplay) {
-  val textColor = when(display) {
+  val textColor = when (display) {
     is PromptDisplay.System -> {
       Sage
     }
+
     is PromptDisplay.User -> {
       PeachYellow
     }

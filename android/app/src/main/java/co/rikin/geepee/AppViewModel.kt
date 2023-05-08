@@ -1,8 +1,8 @@
 package co.rikin.geepee
 
-import android.util.Log
 import android.content.Context
 import android.os.Environment
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,7 +12,6 @@ import androidx.lifecycle.viewModelScope
 import co.rikin.geepee.PromptDisplay.System
 import co.rikin.geepee.PromptDisplay.User
 import co.rikin.geepee.ui.InitialPrompt
-import co.rikin.geepee.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
@@ -267,5 +266,5 @@ sealed class Command(
 }
 
 enum class Peripheral {
-  Camera, ScreenRecorder
+  Camera,
 }
