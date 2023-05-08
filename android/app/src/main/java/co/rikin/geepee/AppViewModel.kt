@@ -12,14 +12,14 @@ import androidx.lifecycle.viewModelScope
 import co.rikin.geepee.PromptDisplay.System
 import co.rikin.geepee.PromptDisplay.User
 import co.rikin.geepee.ui.InitialPrompt
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
-class AppViewModel(private val speechToText: SpeechToText, private val context: Context) : ViewModel() {
+class AppViewModel(private val speechToText: SpeechToText, private val context: Context) :
+  ViewModel() {
   var state by mutableStateOf(AppState(initializing = true))
   private val logger = Logger(context)
 
@@ -30,7 +30,7 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
   init {
     val logFile = logger.getLogFile()
     Log.d("LogFile", "Path: ${logFile.absolutePath}, Size: ${logFile.length()}")
-    
+
     action(AppAction.InitialSetup)
     viewModelScope.launch {
       with(speechToText) {
@@ -64,28 +64,36 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
           )
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
-          val response = GptClient.service.chat(
+        viewModelScope.launch {
+          val response = GptClient.chat(
             ChatRequest(
               messages = initialList
             )
           )
 
-          val message = response.choices.first().message
+          when (response) {
+            is GptResponse.Success -> {
+              val message = response.data.choices.first().message
 
-          state =
-            state.copy(
-              initializing = false,
-              promptQueue = state.promptQueue.toMutableList().apply {
-                add(message)
-                toList()
-              },
-              promptDisplay = listOf(
-                System(
-                  "👋🏽 How can I help?"
+              state =
+                state.copy(
+                  initializing = false,
+                  promptQueue = state.promptQueue.toMutableList().apply {
+                    add(message)
+                    toList()
+                  },
+                  promptDisplay = listOf(
+                    System(
+                      "👋🏽 How can I help?"
+                    )
+                  )
                 )
-              )
-            )
+            }
+
+            is GptResponse.Error -> {
+              Log.e("Network Error", response.message)
+            }
+          }
         }
       }
 
@@ -112,55 +120,66 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
           currentPrompt = ""
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
-          val response = GptClient.service.chat(
+        viewModelScope.launch {
+          val response = GptClient.chat(
             ChatRequest(
               messages = state.promptQueue
             )
           )
+          when (response) {
+            is GptResponse.Success -> {
+              val message = response.data.choices.first().message
+              Log.d(
+                "Debug",
+                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString()
+              )
+              logger.logToFile("GeePee", message.content)
+              val apiActions = Json.decodeFromString<ApiActions>(message.content)
+              val commands = apiActions.actions.map { action ->
+                when (action.component) {
+                  "camera" -> {
+                    Command.SystemCommand(
+                      peripheral = Peripheral.Camera,
+                      description = action.action
+                    )
+                  }
 
-          val message = response.choices.first().message
-          Log.d("Debug", context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString())
-          logger.logToFile("GeePee", message.content)
-          val apiActions = Json.decodeFromString<ApiActions>(message.content)
-          val commands = apiActions.actions.map { action ->
-            when (action.component) {
-              "camera" -> {
-                Command.SystemCommand(
-                  peripheral = Peripheral.Camera,
-                  description = action.action
-                )
-              }
+                  "app" -> {
+                    if (action.appPackage != null) {
+                      Command.AppCommand(
+                        appId = action.appPackage,
+                        deeplink = action.parameters?.deeplink,
+                        url = action.parameters?.url,
+                        description = action.action
+                      )
+                    } else {
+                      logger.logToFile("GeePee", "UnsupportedCommand")
+                      Command.UnsupportedCommand
+                    }
+                  }
 
-              "app" -> {
-                if (action.appPackage != null) {
-                  Command.AppCommand(
-                    appId = action.appPackage,
-                    deeplink = action.parameters?.deeplink,
-                    url = action.parameters?.url,
-                    description = action.action
-                  )
-                } else {
-                  logger.logToFile("GeePee", "UnsupportedCommand")
-                  Command.UnsupportedCommand
+                  else -> {
+                    logger.logToFile("GeePee", "UnsupportedCommand")
+                    Command.UnsupportedCommand
+                  }
                 }
               }
 
-              else -> {
-                logger.logToFile("GeePee", "UnsupportedCommand")
-                Command.UnsupportedCommand
-              }
+              state = state.copy(
+                promptQueue = state.promptQueue.toMutableList().apply {
+                  add(message)
+                  toList()
+                },
+                promptDisplay = state.promptDisplay.dropLast(1),
+                commandQueue = commands
+              )
+            }
+
+            is GptResponse.Error -> {
+              Log.e("Network Error", response.message)
             }
           }
 
-          state = state.copy(
-            promptQueue = state.promptQueue.toMutableList().apply {
-              add(message)
-              toList()
-            },
-            promptDisplay = state.promptDisplay.dropLast(1),
-            commandQueue = commands
-          )
         }
       }
 
@@ -211,8 +230,8 @@ data class AppState(
 )
 
 sealed class PromptDisplay(val content: String) {
-  class User(content: String): PromptDisplay(content)
-  class System(content: String): PromptDisplay(content)
+  class User(content: String) : PromptDisplay(content)
+  class System(content: String) : PromptDisplay(content)
 }
 
 sealed class AppAction {

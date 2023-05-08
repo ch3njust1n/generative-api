@@ -2,18 +2,26 @@ package co.rikin.geepee
 
 import android.util.Log
 import com.squareup.moshi.Json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.create
 import retrofit2.http.Body
 import retrofit2.http.POST
+import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 
-object GptClient {
+sealed class GptResponse {
+  data class Success(val data: ChatResponse): GptResponse()
+  data class Error(val code: Int, val message: String): GptResponse()
+}
 
+object GptClient {
   private val client = OkHttpClient.Builder()
     .addInterceptor(AuthInterceptor)
     .readTimeout(2, TimeUnit.MINUTES)
@@ -25,7 +33,17 @@ object GptClient {
     .addConverterFactory(MoshiConverterFactory.create())
     .build()
 
-  val service = retrofit.create<GptService>()
+  private val service = retrofit.create<GptService>()
+
+  suspend fun chat(request: ChatRequest): GptResponse = withContext(Dispatchers.IO) {
+    try {
+      GptResponse.Success(service.chat(request))
+    } catch (error: HttpException) {
+      GptResponse.Error(error.code(), error.message())
+    } catch (error: SocketTimeoutException) {
+      GptResponse.Error(code = -1, message = error.message ?: "Request timed out")
+    }
+  }
 }
 
 object AuthInterceptor : Interceptor {
