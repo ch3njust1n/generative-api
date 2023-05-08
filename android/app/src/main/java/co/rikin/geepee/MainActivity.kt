@@ -1,9 +1,12 @@
 package co.rikin.geepee
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -77,6 +80,11 @@ class MainActivity : ComponentActivity() {
 )
 @Composable
 fun App() {
+
+  fun Context.canLaunchIntent(intent: Intent): Boolean {
+    return packageManager.queryIntentActivities(intent, 0).isNotEmpty()
+  }
+
   val context = LocalContext.current
 
   val viewModel = viewModel<AppViewModel>(
@@ -89,10 +97,13 @@ fun App() {
   val uri = createImageUri(context)
 
   val permissionsState = rememberMultiplePermissionsState(
-    permissions = listOf(
-      Manifest.permission.CAMERA,
-      Manifest.permission.RECORD_AUDIO
-    ),
+    permissions = buildList {
+      add(Manifest.permission.CAMERA)
+      add(Manifest.permission.RECORD_AUDIO)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        add(Manifest.permission.QUERY_ALL_PACKAGES)
+      }
+    },
     onPermissionsResult = {}
   )
 
@@ -121,19 +132,54 @@ fun App() {
     if (viewModel.state.commandQueue.isEmpty()) return@LaunchedEffect
     when (val command = viewModel.state.commandQueue.first()) {
       is Command.AppCommand -> {
+        val linkIntent = Intent(ACTION_VIEW)
+        // try deeplink first
         if (!command.deeplink.isNullOrEmpty()) {
-          val intent = Intent(ACTION_VIEW, Uri.parse(command.deeplink))
-          appLauncher.launch(intent)
-        } else {
-          val intent = Intent().apply {
+          Log.d("AppCommand Navigation", "Trying deeplink: ${command.deeplink}")
+          linkIntent.data = Uri.parse(command.deeplink)
+          try {
+            appLauncher.launch(linkIntent)
+            return@LaunchedEffect
+          } catch (_: ActivityNotFoundException) {
+            Log.d("AppCommand", "Launching ${command.deeplink} failed")
+          }
+        }
+
+        // try url next
+        if (!command.url.isNullOrEmpty()) {
+          Log.d("AppCommand Navigation", "Trying url: ${Uri.parse(command.url)}")
+          linkIntent.data = Uri.parse(command.url)
+          try {
+            appLauncher.launch(linkIntent)
+            return@LaunchedEffect
+          } catch (_: ActivityNotFoundException) {
+            Log.d("AppCommand", "Launching ${Uri.parse(command.url)} failed")
+          }
+        }
+
+        // try package method last
+        context
+          .packageManager
+          .getLaunchIntentForPackage(command.appId)
+          ?.apply {
             type = "image/jpg"
             setPackage(command.appId)
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TEXT, command.description)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
           }
-          appLauncher.launch(intent)
-        }
+          ?.also { intent ->
+            Log.d("AppCommand Navigation", "Trying package: ${command.appId}")
+            try {
+              appLauncher.launch(intent)
+              return@LaunchedEffect
+            } catch (_: ActivityNotFoundException) {
+              Log.d("AppCommand", "Launching ${command.appId} failed")
+            }
+          }
+
+        // if we reached here the action failed, we should still advance the queue
+        viewModel.action(AppAction.Advance)
       }
 
       is Command.SystemCommand -> {
