@@ -23,10 +23,6 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
   var state by mutableStateOf(AppState(initializing = true))
   private val logger = Logger(context)
 
-  private fun someFunction() {
-    logger.logToFile("AppViewModel", "This is a log message.")
-  }
-
   init {
     val logFile = logger.getLogFile()
     Log.d("LogFile", "Path: ${logFile.absolutePath}, Size: ${logFile.length()}")
@@ -92,6 +88,15 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
 
             is GptResponse.Error -> {
               Log.e("Network Error", response.message)
+              state =
+                state.copy(
+                  initializing = false,
+                  promptDisplay = listOf(
+                    System(
+                      "🚨Something went wrong. Please restart."
+                    )
+                  )
+                )
             }
           }
         }
@@ -176,7 +181,21 @@ class AppViewModel(private val speechToText: SpeechToText, private val context: 
             }
 
             is GptResponse.Error -> {
-              Log.e("Network Error", response.message)
+              Log.e(
+                "Network Error",
+                "code: ${response.code}, message: ${response.message}"
+              )
+
+              val display = when(response.code) {
+                429 -> System("Too many requests, try again later")
+                else -> System("Uh oh, something didn't work")
+              }
+
+              state = state.copy(
+                promptDisplay = state.promptDisplay.toMutableList().apply {
+                  add(display)
+                }
+              )
             }
           }
 
@@ -224,7 +243,6 @@ data class AppState(
   val initializing: Boolean = false,
   val promptQueue: List<ChatMessage> = emptyList(),
   val promptDisplay: List<PromptDisplay> = emptyList(),
-  val commandDisplay: List<Command> = emptyList(),
   val commandQueue: List<Command> = emptyList(),
   val currentPrompt: String = ""
 )
