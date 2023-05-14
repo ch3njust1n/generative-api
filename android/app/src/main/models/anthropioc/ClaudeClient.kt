@@ -33,7 +33,7 @@ object AuthInterceptor : Interceptor {
     val originalRequest = chain.request()
     val newRequest = originalRequest.newBuilder()
       .header("Content-Type", "application/json")
-      .header("Authorization", "Bearer ${BuildConfig.API_KEY}")
+      .header("x-api-key", BuildConfig.API_KEY)
       .build()
     Log.i("OkHttpRequest", newRequest.toString())
     return chain.proceed(newRequest)
@@ -41,13 +41,13 @@ object AuthInterceptor : Interceptor {
 }
 
 interface ClaudeService {
-  @POST("chat/completions")
+  @POST("v1/complete")
   suspend fun chat(@Body body: ChatRequest): ChatResponse
 }
 
 data class ChatRequest(
   @Json(name="model")
-  val model: String = "claude-instant-v1-100k",
+  val model: String = "claude-instant-v1.1-100k",
   @Json(name="temperature")
   val temperature: Float = 0.7f,
   @Json(name="messages")
